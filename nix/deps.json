@@ -1,4 +1,73 @@
 {
-  "!comment": "This is a nixpkgs Gradle dependency lockfile. Run the mitmCache update script on the target nixpkgs revision before an offline package build.",
-  "!version": 1
+ "!comment": "This is a nixpkgs Gradle dependency lockfile. For more details, refer to the Gradle section in the nixpkgs manual.",
+ "!version": 1,
+ "https://repo.maven.apache.org/maven2/org": {
+  "apiguardian#apiguardian-api/1.1.2": {
+   "jar": "sha256-tQlEisUG1gcxnxglN/CzXXEAdYLsdBgyofER5bW3Czg=",
+   "module": "sha256-4IAoExN1s1fR0oc06aT7QhbahLJAZByz7358fWKCI/w=",
+   "pom": "sha256-MjVQgdEJCVw9XTdNWkO09MG3XVSemD71ByPidy5TAqA="
+  },
+  "junit#junit-bom/5.11.4": {
+   "module": "sha256-qaTye+lOmbnVcBYtJGqA9obSd9XTGutUgQR89R2vRuQ=",
+   "pom": "sha256-GdS3R7IEgFMltjNFUylvmGViJ3pKwcteWTpeTE9eQRU="
+  },
+  "junit/jupiter#junit-jupiter-api/5.11.4": {
+   "jar": "sha256-q4PvnlGsRZfVnSa0tYgSEpVQ4vV5pATIr30J9c5bQpM=",
+   "module": "sha256-puov77OqWGj9engK4doRYudt2jdgtIAVwqQZ0jcv88s=",
+   "pom": "sha256-US0j/znHZmWho2RVJiMLz4ib1JiEME9/6+BHsBjuszk="
+  },
+  "junit/jupiter#junit-jupiter-engine/5.11.4": {
+   "jar": "sha256-zfisWfP613TKc4rQOJCVDuuRgz7w6JCHUxd+3SbxWBw=",
+   "module": "sha256-25EWOorwBaMnmFZd1nU3clGJWQ3qttoDsx292kVoahg=",
+   "pom": "sha256-sKMjsNA0REQdE9RjC0DbXvhBYNLC9YXU1kbcOIL5kgc="
+  },
+  "junit/jupiter#junit-jupiter-params/5.11.4": {
+   "jar": "sha256-AqbgFd586UrH8lbn+gW4CR3qhh/nmlVaeZMxPQ9sfZY=",
+   "module": "sha256-WIZbi0uZi5qxnBP45BO34dSBk3TdXfaXYMTAsLxOmJU=",
+   "pom": "sha256-jDWbvqB8ZKas3YweE7T3cFiyQys16G6ald3GMkmgrVQ="
+  },
+  "junit/jupiter#junit-jupiter/5.11.4": {
+   "jar": "sha256-qogOSvuofURzV+TB/AmMXLHSAMuUA0lsANOzWlvQ6Ns=",
+   "module": "sha256-o8NT7XUWrhg16rlaCH9PCaWwzH0LiwOf53oDm4q1IQM=",
+   "pom": "sha256-qGLfEe5TmYLvyxQdnArecDe7oCZdC1idX7hNsNIS8dk="
+  },
+  "junit/platform#junit-platform-commons/1.11.4": {
+   "jar": "sha256-nt2Wmw0GcMVBBbyRrnm9HG9QPhIRX6uoIHO4TIa7wzQ=",
+   "module": "sha256-C54mJcj0aLPNQTLMCoBfif5B+FLRrf/3Xz6xRlyhy2s=",
+   "pom": "sha256-zRLSt8JC8WVUjtnJQGFg3O22CAkltHz3MeD9rl+0vOI="
+  },
+  "junit/platform#junit-platform-engine/1.11.4": {
+   "jar": "sha256-sd2Zj2T5rK3BWWbZzT0IB0ZiZ3s+OQ8KOPy/C7THIzA=",
+   "module": "sha256-v2zh+1lR3Gx942re72rq9474LWODHFzOvOOI2p/F/iU=",
+   "pom": "sha256-lDRxV5mEIS++adA+3sfC/0+6sYiL4LgMJl6nCGn9ir0="
+  },
+  "openjfx#javafx-base/21.0.12": {
+   "jar": "sha256-Dqg/5ppAas+LfRJxPOdib3o8ZzuwT9MZ99lWEWff3PQ=",
+   "pom": "sha256-EZK8A8JTc5nuLR6RNlF4VwUMWc09s3Cmq6jUIVT+x1E="
+  },
+  "openjfx#javafx-base/21.0.12/linux": {
+   "jar": "sha256-rIMhPjQ9c019MVtKhQswnY3kpJUMbkZJfYvGjnRLJF0="
+  },
+  "openjfx#javafx-controls/21.0.12": {
+   "pom": "sha256-KQUEW9wW0CHjm2ouJSiwS0HewsSW2GGiGk+wntoPEnI="
+  },
+  "openjfx#javafx-controls/21.0.12/linux": {
+   "jar": "sha256-3lQX27OZINGTdgc9u+iWuXy9Wk6I1WzGYn/woyZm3AQ="
+  },
+  "openjfx#javafx-graphics/21.0.12": {
+   "jar": "sha256-IrrmOX393ldE0J0+R8A+/IB4jZtBwd0UDwX2fd281/8=",
+   "pom": "sha256-DvYkeG2U1Had3S3EgILweRoHtgtdipm826ZJcQBaF74="
+  },
+  "openjfx#javafx-graphics/21.0.12/linux": {
+   "jar": "sha256-IA7kbIGdA4Ecc2kAzfrLIEeSExOyYdk+Us3u8erx67c="
+  },
+  "openjfx#javafx/21.0.12": {
+   "pom": "sha256-OwSYv/bG2abE4mU+oTDnzIt/zvVymEymZvBItPsnft8="
+  },
+  "opentest4j#opentest4j/1.3.0": {
+   "jar": "sha256-SOLfY2yrZWPO1k3N/4q7I1VifLI27wvzdZhoLd90Lxs=",
+   "module": "sha256-SL8dbItdyU90ZSvReQD2VN63FDUCSM9ej8onuQkMjg0=",
+   "pom": "sha256-m/fP/EEPPoNywlIleN+cpW2dQ72TfjCUhwbCMqlDs1U="
+  }
+ }
 }
