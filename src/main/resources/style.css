@@ -4,93 +4,316 @@
     -fx-font-size: 13px;
 }
 
+.page-header {
+    -fx-border-color: transparent transparent derive(-fx-text-base-color, -75%) transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.eyebrow, .panel-eyebrow {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1.5px;
+    -fx-text-fill: -fx-accent;
+}
+
 .title {
-    -fx-font-size: 26px;
+    -fx-font-size: 29px;
     -fx-font-weight: bold;
     -fx-text-fill: -fx-text-base-color;
 }
 
-.subtitle, .status {
+.subtitle, .section-hint, .status {
+    -fx-text-fill: derive(-fx-text-base-color, -23%);
+}
+
+.cycle-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-accent;
+}
+
+.field-label, .panel-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
     -fx-text-fill: derive(-fx-text-base-color, -18%);
 }
 
-.cycle {
-    -fx-text-fill: -fx-accent;
-    -fx-font-weight: bold;
-}
-
-.schedule-table {
-    -fx-background-color: derive(-fx-base, 4%);
-    -fx-background-radius: 14px;
-    -fx-border-color: derive(-fx-accent, -10%);
-    -fx-border-radius: 14px;
-    -fx-border-width: 1px;
-    -fx-padding: 4px;
-}
-
-.schedule-table .column-header-background {
-    -fx-background-color: derive(-fx-base, 11%);
-    -fx-background-radius: 10px 10px 0 0;
-}
-
-.schedule-table .column-header,
-.schedule-table .filler {
-    -fx-background-color: transparent;
-    -fx-size: 40px;
-}
-
-.schedule-table .column-header .label {
-    -fx-text-fill: -fx-accent;
-    -fx-font-weight: bold;
-}
-
-.schedule-table .table-row-cell {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent transparent derive(-fx-base, 11%) transparent;
-    -fx-border-width: 0 0 1px 0;
-    -fx-cell-size: 42px;
-}
-
-.schedule-table .table-row-cell:filled:hover {
-    -fx-background-color: derive(-fx-accent, 82%);
-}
-
-.schedule-table .table-row-cell:filled:selected {
-    -fx-background-color: derive(-fx-accent, 56%);
-}
-
-.schedule-table .table-cell {
-    -fx-text-fill: -fx-text-base-color;
-    -fx-alignment: CENTER_LEFT;
-    -fx-padding: 0 10px;
-}
-
-.schedule-table .text-field {
-    -fx-background-color: derive(-fx-base, 12%);
-    -fx-background-radius: 7px;
-    -fx-border-color: -fx-accent;
-    -fx-border-radius: 7px;
-    -fx-text-fill: -fx-text-base-color;
-}
-
-.button {
-    -fx-background-color: derive(-fx-base, 13%);
+.combo-box, .menu-button, .button {
     -fx-background-radius: 9px;
-    -fx-border-color: derive(-fx-accent, -8%);
     -fx-border-radius: 9px;
     -fx-border-width: 1px;
-    -fx-text-fill: -fx-text-base-color;
-    -fx-padding: 8px 13px;
+    -fx-padding: 8px 12px;
 }
 
-.button:hover {
-    -fx-background-color: derive(-fx-accent, 66%);
+.combo-box {
+    -fx-background-color: derive(-fx-base, 13%);
+    -fx-border-color: derive(-fx-accent, -15%);
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.combo-box:hover, .combo-box:focused {
+    -fx-border-color: -fx-accent;
+}
+
+.combo-box .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: derive(-fx-base, 8%);
+    -fx-border-color: -fx-accent;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: -fx-accent;
+    -fx-text-fill: -fx-base;
+}
+
+.secondary-button {
+    -fx-background-color: derive(-fx-base, 13%);
+    -fx-border-color: derive(-fx-text-base-color, -58%);
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.secondary-button:hover {
+    -fx-background-color: -fx-accent;
+    -fx-border-color: -fx-accent;
+    -fx-text-fill: -fx-base;
+}
+
+.session-viewport, .session-viewport .viewport {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.session-content, .session-list {
+    -fx-background-color: transparent;
+}
+
+.section-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.session-card {
+    -fx-background-color: derive(-fx-base, 8%);
+    -fx-background-radius: 14px;
+    -fx-border-color: derive(-fx-text-base-color, -72%);
+    -fx-border-radius: 14px;
+    -fx-border-width: 1px;
+    -fx-padding: 15px 17px;
+}
+
+.session-card:hover {
+    -fx-background-color: -fx-accent;
+    -fx-border-color: -fx-accent;
+}
+
+.session-card.active {
+    -fx-background-color: derive(-fx-accent, 82%);
+    -fx-border-color: -fx-accent;
+    -fx-border-width: 1.5px;
+}
+
+.session-card.completed {
+    -fx-opacity: 0.58;
+}
+
+.session-card.completed .item-title {
+    -fx-strikethrough: true;
+}
+
+.study-card:hover .item-title,
+.study-card:hover .item-subtitle,
+.study-card:hover .item-order,
+.study-card:hover .duration-chip,
+.pause-card:hover .pause-copy .label,
+.pause-card:hover .duration-chip {
+    -fx-text-fill: -fx-base;
+}
+
+.item-check {
+    -fx-padding: 0;
+}
+
+.item-check .box {
+    -fx-background-color: transparent;
+    -fx-border-color: derive(-fx-text-base-color, -20%);
+    -fx-border-radius: 6px;
+    -fx-border-width: 1.5px;
+    -fx-background-radius: 6px;
+    -fx-padding: 5px;
+}
+
+.item-check:hover .box, .item-check:selected .box {
+    -fx-border-color: -fx-accent;
+}
+
+.item-check:selected .mark {
+    -fx-background-color: -fx-accent;
+}
+
+.item-order {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: derive(-fx-text-base-color, -45%);
+}
+
+.item-glyph, .pause-glyph {
+    -fx-font-size: 21px;
+    -fx-text-fill: -fx-accent;
+}
+
+.item-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.item-subtitle, .pause-copy .label:last-child {
+    -fx-font-size: 11px;
+    -fx-text-fill: derive(-fx-text-base-color, -28%);
+}
+
+.duration-chip {
+    -fx-background-color: derive(-fx-accent, 72%);
+    -fx-background-radius: 20px;
+    -fx-padding: 6px 9px;
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.pause-card {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 4px 17px;
+}
+
+.pause-card.active {
+    -fx-background-color: derive(-fx-accent, 88%);
+    -fx-border-color: derive(-fx-accent, -10%);
+}
+
+.pause-glyph {
+    -fx-font-size: 17px;
+    -fx-text-fill: derive(-fx-text-base-color, -32%);
+}
+
+.pause-copy .label:first-child {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: derive(-fx-text-base-color, -12%);
+}
+
+.side-panel {
+    -fx-border-color: transparent transparent transparent derive(-fx-text-base-color, -80%);
+    -fx-border-width: 0 0 0 1px;
+}
+
+.side-card {
+    -fx-background-color: derive(-fx-base, 8%);
+    -fx-background-radius: 14px;
+    -fx-border-color: derive(-fx-text-base-color, -72%);
+    -fx-border-radius: 14px;
+    -fx-padding: 17px;
+}
+
+.panel-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.progress-number {
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.progress-bar {
+    -fx-accent: -fx-accent;
+}
+
+.progress-bar .track {
+    -fx-background-color: derive(-fx-base, 18%);
+    -fx-background-radius: 8px;
+}
+
+.progress-bar .bar {
+    -fx-background-color: -fx-accent;
+    -fx-background-radius: 8px;
+    -fx-padding: 5px;
+}
+
+.panel-value {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.panel-description {
+    -fx-font-size: 11px;
+    -fx-line-spacing: 3px;
+    -fx-text-fill: derive(-fx-text-base-color, -25%);
 }
 
 .primary-button {
     -fx-background-color: -fx-accent;
+    -fx-border-color: -fx-accent;
     -fx-text-fill: -fx-base;
     -fx-font-weight: bold;
+}
+
+.primary-button:hover {
+    -fx-background-color: derive(-fx-accent, -10%);
+    -fx-border-color: derive(-fx-accent, -10%);
+    -fx-text-fill: -fx-base;
+}
+
+.folder-list .button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: derive(-fx-text-base-color, -5%);
+    -fx-padding: 6px 4px;
+}
+
+.folder-list .button:hover {
+    -fx-background-color: -fx-accent;
+    -fx-border-color: -fx-accent;
+    -fx-text-fill: -fx-base;
+}
+
+.separator .line {
+    -fx-border-color: derive(-fx-text-base-color, -78%);
+    -fx-border-width: 1px 0 0 0;
+}
+
+.menu-item {
+    -fx-background-color: derive(-fx-base, 8%);
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.menu-item:focused, .menu-item:hover {
+    -fx-background-color: -fx-accent;
+    -fx-text-fill: -fx-base;
+}
+
+.context-menu {
+    -fx-background-color: derive(-fx-base, 8%);
+    -fx-background-radius: 9px;
+    -fx-border-color: -fx-accent;
+    -fx-border-radius: 9px;
+}
+
+.scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical .thumb {
+    -fx-background-color: derive(-fx-text-base-color, -50%);
+    -fx-background-radius: 8px;
 }
 
 .dialog-pane {
