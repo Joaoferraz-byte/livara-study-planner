@@ -24,6 +24,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -266,7 +267,7 @@ public final class StudyPlannerApp extends Application {
         statusLabel.setText("Salvamento automático  ·  " + schedulePath);
     }
 
-    private HBox studyCard(StudySessionItem item, int index) {
+    private TitledPane studyCard(StudySessionItem item, int index) {
         CheckBox done = new CheckBox();
         done.setSelected(progress.isCompleted(item.id()));
         done.setOnAction(event -> toggleItem(item));
@@ -292,13 +293,26 @@ public final class StudyPlannerApp extends Application {
         HBox card = new HBox(14, done, indexBox, copy, duration);
         card.setAlignment(Pos.CENTER_LEFT);
         card.getStyleClass().addAll("session-card", "study-card");
-        if (progress.isCompleted(item.id())) {
+        boolean completed = progress.isCompleted(item.id());
+        if (completed) {
             card.getStyleClass().add("completed");
         }
         if (isActive(index)) {
             card.getStyleClass().add("active");
         }
-        return card;
+
+        Label detail = new Label("Foco: " + item.focus().label() + "  ·  "
+                + item.durationMinutes() + " min  ·  pausa seguinte: 15 min");
+        detail.getStyleClass().add("item-detail");
+        TitledPane pane = new TitledPane("", detail);
+        pane.setGraphic(card);
+        pane.setExpanded(!completed);
+        pane.setAnimated(false);
+        pane.getStyleClass().add("session-expander");
+        if (completed) {
+            pane.getStyleClass().add("completed");
+        }
+        return pane;
     }
 
     private HBox pauseCard(StudySessionItem item, int index) {
@@ -341,7 +355,7 @@ public final class StudyPlannerApp extends Application {
 
     private void toggleItem(StudySessionItem item) {
         progress = progress.toggle(item.id()).withActiveItemIndex(nextPendingIndex());
-        if (!item.pause() && allStudyBlocksCompleted()) {
+        if (allSessionItemsCompleted()) {
             advanceCycleAutomatically();
             return;
         }
@@ -349,10 +363,9 @@ public final class StudyPlannerApp extends Application {
         renderSession();
     }
 
-    private boolean allStudyBlocksCompleted() {
-        return sessionItems.stream()
-                .filter(item -> !item.pause())
-                .allMatch(item -> progress.isCompleted(item.id()));
+    private boolean allSessionItemsCompleted() {
+        return !sessionItems.isEmpty()
+                && sessionItems.stream().allMatch(item -> progress.isCompleted(item.id()));
     }
 
     private void selectWorkflow(WorkflowTemplate workflowTemplate) {

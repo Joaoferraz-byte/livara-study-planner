@@ -99,6 +99,25 @@
     -fx-text-fill: -fx-text-base-color;
 }
 
+.session-expander {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.session-expander > .title {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.session-expander > .content {
+    -fx-background-color: derive(-fx-base, 5%);
+    -fx-border-color: transparent derive(-fx-text-base-color, -72%) derive(-fx-text-base-color, -72%) derive(-fx-text-base-color, -72%);
+    -fx-border-radius: 0 0 14px 14px;
+    -fx-border-width: 0 1px 1px 1px;
+    -fx-padding: 10px 17px 13px 92px;
+}
+
 .session-card {
     -fx-background-color: derive(-fx-base, 8%);
     -fx-background-radius: 14px;
@@ -117,6 +136,14 @@
     -fx-background-color: derive(-fx-accent, 82%);
     -fx-border-color: -fx-accent;
     -fx-border-width: 1.5px;
+}
+
+.session-expander:expanded > .title .session-card {
+    -fx-background-radius: 14px 14px 0 0;
+}
+
+.session-expander:expanded > .content .item-detail {
+    -fx-text-fill: derive(-fx-text-base-color, -25%);
 }
 
 .session-card.completed {
@@ -177,6 +204,11 @@
 .item-subtitle, .pause-copy .label:last-child {
     -fx-font-size: 11px;
     -fx-text-fill: derive(-fx-text-base-color, -28%);
+}
+
+.item-detail {
+    -fx-font-size: 11px;
+    -fx-text-fill: derive(-fx-text-base-color, -25%);
 }
 
 .duration-chip {
