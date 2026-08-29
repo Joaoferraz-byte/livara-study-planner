@@ -1,27 +1,29 @@
 # Dashboard architecture
 
-## Product language
+## Visual direction
 
-All visible strings, descriptions, menu items, status messages, validation dialogs and template labels are English. Persistent identifiers remain unchanged so existing schedule JSON files stay compatible.
+The dashboard follows the visual language of the historical Livara Vault study-cycle dashboard, not a generic admin panel. It uses a dark ambient shell, subtle geometry, semantic accent colors, controlled density, layered surfaces, compact metadata and deliberate state transitions. Decorative elements are allowed only when they communicate progress, focus, or navigation.
 
-## Composition
+## JavaFX layout responsibilities
 
-The root is a vertical dashboard shell with four rows: a compact app bar, a hero widget, a responsive widget grid, and a small status line. The main widget grid is built with `GridPane` and two column constraints on wide windows: a flexible primary column and a bounded secondary column. At the compact breakpoint, the grid becomes one column and the secondary widgets move below the session widget. No visible template selector is placed in the main workflow; the template is an app-level setting exposed in the menu.
+`StackPane` owns the root background and non-interactive ambient decoration. A background layer contains a low-opacity `Canvas`/`Pane` with radial and orbital shapes; the content layer remains independent so decoration never changes measurement or hit-testing. `VBox` owns the macro page flow. `HBox` owns one-dimensional rows such as the app bar, action rows, metadata chips and card headers. `FlowPane` owns metric tiles where items may wrap; it is preferable to hard-coded columns for compact windows. `GridPane` is reserved for the stable three-tile overview strip where equal-width alignment is meaningful. There is no attempt to copy the Vault's CSS Grid for every section.
 
-The hero widget contains only the current workflow title, cycle badge, progress summary and a single compact menu action. The first widget row contains session progress and rhythm metrics. The second row contains the full-width `Today's flow` widget and a `Vault` widget. Every widget uses the same surface, border, radius, padding and title-row contract.
+## Widget hierarchy
 
-## Session cards
+The top bar is compact and contains brand context plus one `MenuButton`. The hero is a two-zone widget: the left side holds an English eyebrow, title, explanatory copy, current workflow/cycle metadata and a small action row; the right side holds a progress ring with completed blocks and a short cycle label. The main content is a wide vertical flow widget beside a stack of status widgets on desktop, and a single vertical flow on compact windows.
 
-A session item is a normal `VBox`/`HBox` card, not a `TitledPane`. The card owns its detail region, so expanded and collapsed states share one exact width, border and surface. There is no disclosure arrow. The expand/collapse action is the card itself or a small text action only when needed; the checkbox is 18px and the active state is expressed by a left accent rail and background token, never by an opaque near-white surface. The list is a `VBox` with `fillWidth` and every card uses `setMaxWidth(Double.MAX_VALUE)`.
+The status stack contains `Current rotation`, `Completed cycles`, and `Session rhythm`. Each panel uses the same widget factory but may apply one semantic accent token. A compact Vault action panel uses the same action-row pattern as the historical dashboard and avoids unnecessary folder glyphs.
+
+## Rich study block contract
+
+Every focus block is a stateful card. Its header contains a dedicated 24–28px circular check action, a semantic 16–18px icon glyph in a bounded surface, an eyebrow such as `BLOCK 01 · FOCUS`, a title, a one-line status and a duration pill. The card body is hidden by default, but the card remains a single measured component when opened; the body contains focus/break metadata chips, a strategy callout and three short task rows. A completed block changes the check action to a success state, shows a check glyph, applies a restrained success border and collapses the body. An unfinished block can be expanded by clicking its header; there is no visible chevron/expand icon.
+
+A transparent accessible `CheckBox` remains in the scene graph for keyboard and screen-reader semantics, but its visual representation is a custom `StackPane`/CSS pseudo-surface. Its dimensions are explicit and compact; the hit area may be 28px while the drawn mark is 16–18px. This avoids the oversized native checkbox seen in the previous version.
 
 ## Responsive behavior
 
-The window has a practical minimum of 720×620 rather than a desktop-only 980px width. The wide layout is used at 1040px and above; the compact layout is used below it. At compact widths, widgets stack, the Vault folder labels remain ellipsized, the hero action wraps into its own row, and the flow card text can wrap without horizontal overflow. A single internal flow scroll viewport is allowed only when the session content exceeds the available height; it has no horizontal scrollbar and uses a 6px thumb. No nested widget adds its own viewport.
+The window chooses its initial size from the monitor bounds. Above 1040px, the flow widget receives the flexible primary width and the status stack receives a bounded secondary width. Below 1040px, the status stack follows the flow vertically. Below 820px, the hero becomes one column and the progress ring moves below the copy. Below 600px, the metric tiles wrap through `FlowPane`, card text wraps, metadata chips wrap and the app keeps only one internal vertical `ScrollPane` for the sequence. No horizontal scrollbar is permitted.
 
-## Tokens
+## Visual tokens
 
-The stylesheet defines a small token layer for spacing, radii, surfaces, borders, muted text, accent, success and focus. Controls use explicit compact sizes. The same tokens are applied to widget panels, cards, buttons, menu/context-menu surfaces, combo popups and scrollbars. No generic `.button` rule assigns a large padding to all controls.
-
-## Layout translation from CSS
-
-The Vault reference uses CSS Grid for macro regions and Flexbox for one-dimensional card rows. JavaFX has no CSS Grid; the direct equivalent is `GridPane` with `ColumnConstraints`/`RowConstraints`, plus `HBox`/`VBox` with grow priorities and fill widths. The implementation must keep these responsibilities separate: GridPane places widgets; HBox/VBox aligns the contents of each widget.
+The CSS token layer owns background, surface, surface-raised, surface-highlight, border, border-strong, text, muted, faint, accent, accent-soft, secondary, success, warning, radius and spacing. All widgets use these tokens. No rule maps a looked-up color to a lightened near-white surface. The selected state uses a dark surface plus an accent rail; success uses a dark green-tinted surface. Menu, dialog and combo popup surfaces explicitly share the widget surface and radius so no square white parent leaks outside a rounded child.
