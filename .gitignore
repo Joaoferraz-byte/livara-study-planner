@@ -1,0 +1,11 @@
+.gradle/
+build/
+out/
+*.iml
+.idea/
+.vscode/
+.DS_Store
+
+# Local planner state; examples remain tracked under src/main/resources.
+.schedule-state/
+.tooling/

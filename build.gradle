@@ -1,0 +1,52 @@
+plugins {
+    id 'application'
+    id 'java'
+}
+
+group = 'com.joaoferraz.livara'
+version = '0.1.0'
+
+def javafxVersion = '21.0.12'
+
+def targetPlatform = System.getProperty('os.name').toLowerCase().contains('linux') ? 'linux' :
+        (System.getProperty('os.name').toLowerCase().contains('mac') ? 'mac' : 'win')
+
+
+dependencies {
+    implementation "org.openjfx:javafx-base:${javafxVersion}:${targetPlatform}"
+    implementation "org.openjfx:javafx-controls:${javafxVersion}:${targetPlatform}"
+    implementation "org.openjfx:javafx-graphics:${javafxVersion}:${targetPlatform}"
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+application {
+    mainClass = 'com.joaoferraz.livara.studyplanner.cli.Main'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jar {
+    manifest {
+        attributes('Main-Class': application.mainClass.get())
+    }
+}
+
+// Keeps the GUI and CLI entry points in the same distribution while allowing
+// the CLI to run in headless CI without creating a JavaFX Application instance.
+run {
+    standardInput = System.in
+}
