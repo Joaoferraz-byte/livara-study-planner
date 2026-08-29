@@ -4,16 +4,16 @@ import java.util.Arrays;
 import java.util.Locale;
 
 public enum FocusArea {
-    MARKET_PROGRAMMING("market-programming", "Programação para o mercado", 5),
-    PROJECTS("projects", "Projetos aplicando o estudo", 5),
-    LOGIC("logic", "Lógica e implementação", 4),
-    ARCHITECTURE("architecture", "Arquitetura de software", 3),
-    OPTIMIZATION("optimization", "Otimização de software", 3),
-    PHYSICS("physics", "Física", 2),
-    BIOLOGY("biology", "Biologia", 2),
-    CHEMISTRY("chemistry", "Química", 2),
-    MATHEMATICS("mathematics", "Matemática", 2),
-    REVIEW("review", "Revisão e planejamento", 3);
+    MARKET_PROGRAMMING("market-programming", "Market programming", 5),
+    PROJECTS("projects", "Applied projects", 5),
+    LOGIC("logic", "Logic and implementation", 4),
+    ARCHITECTURE("architecture", "Software architecture", 3),
+    OPTIMIZATION("optimization", "Software optimization", 3),
+    PHYSICS("physics", "Physics", 2),
+    BIOLOGY("biology", "Biology", 2),
+    CHEMISTRY("chemistry", "Chemistry", 2),
+    MATHEMATICS("mathematics", "Mathematics", 2),
+    REVIEW("review", "Review and planning", 3);
 
     private final String id;
     private final String label;

@@ -4,47 +4,16 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /**
- * Reusable study-workflow intentions. A template is not a weekday schedule:
- * it describes what deserves more repetitions when the weekly sequence is
- * generated.
+ * Reusable study-workflow intentions. Future templates can be added here;
+ * the current product intentionally ships with one requested template.
  */
 public enum WorkflowTemplate {
     MARKET_PROGRAMMING(
             "market-programming",
-            "Programação para o mercado",
-            "Prática profissional como eixo principal, com projetos aplicados e revisão espaçada.",
+            "Market programming",
+            "Professional practice as the main axis, supported by applied projects and spaced review.",
             FocusArea.MARKET_PROGRAMMING,
-            FocusArea.PROJECTS),
-    APPLIED_PROJECTS(
-            "applied-projects",
-            "Projetos aplicando o estudo",
-            "Construção de projetos como eixo principal, apoiada por programação profissional.",
-            FocusArea.PROJECTS,
-            FocusArea.MARKET_PROGRAMMING),
-    LOGIC_IMPLEMENTATION(
-            "logic-implementation",
-            "Treino de lógica e implementação",
-            "Problemas e implementação intercalados com aplicação em projeto.",
-            FocusArea.LOGIC,
-            FocusArea.PROJECTS),
-    SOFTWARE_ARCHITECTURE(
-            "software-architecture",
-            "Arquitetura de software",
-            "Decisões de arquitetura conectadas a código real e revisão de fundamentos.",
-            FocusArea.ARCHITECTURE,
-            FocusArea.PROJECTS),
-    SOFTWARE_OPTIMIZATION(
-            "software-optimization",
-            "Otimização de software",
-            "Medição, diagnóstico e otimização aplicados a projetos reais.",
-            FocusArea.OPTIMIZATION,
-            FocusArea.PROJECTS),
-    SCHOOL_SUBJECTS(
-            "school-subjects",
-            "Matérias escolares",
-            "Alternância entre matérias escolares, com otimização como foco complementar.",
-            FocusArea.OPTIMIZATION,
-            FocusArea.MARKET_PROGRAMMING);
+            FocusArea.PROJECTS);
 
     private final String id;
     private final String label;

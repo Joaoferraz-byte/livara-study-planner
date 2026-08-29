@@ -1,8 +1,8 @@
 package com.joaoferraz.livara.studyplanner.domain;
 
 public enum Cycle {
-    A("Ciclo A", "Física + Biologia"),
-    B("Ciclo B", "Química + Matemática");
+    A("A", "Physics + Biology"),
+    B("B", "Chemistry + Mathematics");
 
     private final String label;
     private final String subjects;

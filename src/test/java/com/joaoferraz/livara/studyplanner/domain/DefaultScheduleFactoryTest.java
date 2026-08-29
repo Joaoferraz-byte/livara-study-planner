@@ -25,14 +25,14 @@ class DefaultScheduleFactoryTest {
 
     @Test
     void rotatesOnlyTheSchoolPairBetweenCycles() {
-        List<StudyBlock> cycleA = DefaultScheduleFactory.sequence(Cycle.A, WorkflowTemplate.SCHOOL_SUBJECTS);
-        List<StudyBlock> cycleB = DefaultScheduleFactory.sequence(Cycle.B, WorkflowTemplate.SCHOOL_SUBJECTS);
+        List<StudyBlock> cycleA = DefaultScheduleFactory.sequence(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
+        List<StudyBlock> cycleB = DefaultScheduleFactory.sequence(Cycle.B, WorkflowTemplate.MARKET_PROGRAMMING);
 
         assertEquals(EnumSet.of(FocusArea.PHYSICS, FocusArea.BIOLOGY),
                 EnumSet.copyOf(cycleA.stream().map(StudyBlock::focus).filter(this::isSchool).toList()));
         assertEquals(EnumSet.of(FocusArea.CHEMISTRY, FocusArea.MATHEMATICS),
                 EnumSet.copyOf(cycleB.stream().map(StudyBlock::focus).filter(this::isSchool).toList()));
-        assertTrue(ScheduleValidator.validate(DefaultScheduleFactory.create(Cycle.B, WorkflowTemplate.SCHOOL_SUBJECTS)).isEmpty());
+        assertTrue(ScheduleValidator.validate(DefaultScheduleFactory.create(Cycle.B, WorkflowTemplate.MARKET_PROGRAMMING)).isEmpty());
     }
 
     @Test

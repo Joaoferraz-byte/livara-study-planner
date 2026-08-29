@@ -26,15 +26,13 @@ class ProgressStoreTest {
     }
 
     @Test
-    void resetsProgressWhenCycleOrWorkflowChanges() throws Exception {
+    void resetsProgressWhenCycleChanges() throws Exception {
         Path file = Files.createTempFile("livara-progress", ".properties");
         ProgressStore store = new ProgressStore();
         store.save(file, ProgressState.empty(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING).toggle("study-1"));
 
         ProgressState cycleChanged = store.loadOrEmpty(file, Cycle.B, WorkflowTemplate.MARKET_PROGRAMMING);
-        ProgressState workflowChanged = store.loadOrEmpty(file, Cycle.A, WorkflowTemplate.APPLIED_PROJECTS);
 
         assertFalse(cycleChanged.isCompleted("study-1"));
-        assertFalse(workflowChanged.isCompleted("study-1"));
     }
 }

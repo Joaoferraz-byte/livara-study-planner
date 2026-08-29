@@ -55,22 +55,22 @@ public final class DefaultScheduleFactory {
     public static List<StudyBlock> sequence(Cycle cycle, WorkflowTemplate workflowTemplate) {
         FocusArea schoolOne = cycle == Cycle.A ? FocusArea.PHYSICS : FocusArea.CHEMISTRY;
         FocusArea schoolTwo = cycle == Cycle.A ? FocusArea.BIOLOGY : FocusArea.MATHEMATICS;
-        String schoolOneTopic = cycle == Cycle.A ? "Física · recuperação de conceitos" : "Química · recuperação de conceitos";
-        String schoolTwoTopic = cycle == Cycle.A ? "Biologia · recuperação de conceitos" : "Matemática · recuperação de conceitos";
+        String schoolOneTopic = cycle == Cycle.A ? "Physics · concept retrieval" : "Chemistry · concept retrieval";
+        String schoolTwoTopic = cycle == Cycle.A ? "Biology · concept retrieval" : "Mathematics · concept retrieval";
         FocusArea primary = workflowTemplate.primaryFocus();
         FocusArea secondary = workflowTemplate.secondaryFocus();
 
         List<StudyBlock> sequence = new ArrayList<>();
-        add(sequence, primary, topic(primary, workflowTemplate, "Bloco principal"));
-        add(sequence, secondary, topic(secondary, workflowTemplate, "Aplicação e conexão"));
-        addIfMissing(sequence, FocusArea.MARKET_PROGRAMMING, workflowTemplate, "Prática profissional");
-        addIfMissing(sequence, FocusArea.PROJECTS, workflowTemplate, "Projeto aplicado");
-        addIfMissing(sequence, FocusArea.LOGIC, workflowTemplate, "Resolver e implementar");
-        addIfMissing(sequence, FocusArea.ARCHITECTURE, workflowTemplate, "Desenhar e justificar");
-        addIfMissing(sequence, FocusArea.OPTIMIZATION, workflowTemplate, "Medir e melhorar");
+        add(sequence, primary, topic(primary, workflowTemplate, "Main focus"));
+        add(sequence, secondary, topic(secondary, workflowTemplate, "Application and connection"));
+        addIfMissing(sequence, FocusArea.MARKET_PROGRAMMING, workflowTemplate, "Professional practice");
+        addIfMissing(sequence, FocusArea.PROJECTS, workflowTemplate, "Applied project");
+        addIfMissing(sequence, FocusArea.LOGIC, workflowTemplate, "Solve and implement");
+        addIfMissing(sequence, FocusArea.ARCHITECTURE, workflowTemplate, "Design and justify");
+        addIfMissing(sequence, FocusArea.OPTIMIZATION, workflowTemplate, "Measure and improve");
         add(sequence, schoolOne, schoolOneTopic);
         add(sequence, schoolTwo, schoolTwoTopic);
-        add(sequence, primary, topic(primary, workflowTemplate, "Recuperação espaçada"));
+        add(sequence, primary, topic(primary, workflowTemplate, "Spaced retrieval"));
         return List.copyOf(sequence);
     }
 

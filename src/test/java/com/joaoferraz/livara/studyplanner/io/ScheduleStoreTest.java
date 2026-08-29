@@ -29,6 +29,6 @@ class ScheduleStoreTest {
         assertEquals(original.pauseMinutes(), loaded.pauseMinutes());
         assertEquals(original.totalBlocks(), loaded.totalBlocks());
         assertEquals(original.blocksByDay(), loaded.blocksByDay());
-        assertTrue(store.toJson(loaded).contains("Química"));
+        assertTrue(store.toJson(loaded).contains("Chemistry"));
     }
 }
