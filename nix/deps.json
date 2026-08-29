@@ -1,0 +1,4 @@
+{
+  "!comment": "This is a nixpkgs Gradle dependency lockfile. Run the mitmCache update script on the target nixpkgs revision before an offline package build.",
+  "!version": 1
+}
