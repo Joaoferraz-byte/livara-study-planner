@@ -82,7 +82,7 @@ public final class StudyPlannerApp extends Application {
     @Override
     public void start(Stage stage) {
         schedulePath = requestedPath == null ? defaultPath() : requestedPath;
-        progressPath = schedulePath.resolveSibling("study-progress.properties");
+        progressPath = schedulePath.resolveSibling(schedulePath.getFileName() + ".progress.properties");
         try {
             current = service.loadOrCreate(schedulePath);
             progress = progressStore.loadOrEmpty(progressPath, current.cycle(), current.workflowTemplate());
@@ -449,12 +449,29 @@ public final class StudyPlannerApp extends Application {
             statusLabel.setText("Pasta do Vault não encontrada: " + target);
             return;
         }
-        try {
-            new ProcessBuilder("nvim", "-c", "Oil " + target).inheritIO().start();
-            statusLabel.setText("Neovim aberto no Oil: " + target);
-        } catch (IOException exception) {
-            statusLabel.setText("Não foi possível abrir o Neovim: " + exception.getMessage());
+        String oilCommand = "Oil " + vimEscape(target.toString());
+        IOException failure = null;
+        for (List<String> command : List.of(
+                List.of("footclient", "nvim", "-c", oilCommand),
+                List.of("wezterm", "start", "--", "nvim", "-c", oilCommand),
+                List.of("nvim", "-c", oilCommand))) {
+            try {
+                new ProcessBuilder(command).start();
+                statusLabel.setText("Neovim aberto no Oil: " + target);
+                return;
+            } catch (IOException exception) {
+                failure = exception;
+            }
         }
+        statusLabel.setText("Não foi possível abrir o Neovim: "
+                + (failure == null ? "nenhum terminal disponível" : failure.getMessage()));
+    }
+
+    private static String vimEscape(String value) {
+        return value.replace("\\\\", "\\\\\\\\")
+                .replace(" ", "\\\\ ")
+                .replace("|", "\\\\|")
+                .replace("\"", "\\\\\"");
     }
 
     private void applyMatugenPalette(BorderPane root) {
