@@ -191,6 +191,7 @@
 }
 
 .item-glyph, .pause-glyph {
+    -fx-font-family: "Noto Sans Symbols 2", "Noto Sans Symbols", "DejaVu Sans";
     -fx-font-size: 21px;
     -fx-text-fill: -fx-accent;
 }
@@ -212,10 +213,11 @@
 }
 
 .duration-chip {
-    -fx-background-color: derive(-fx-accent, 72%);
+    -fx-background-color: -fx-accent;
     -fx-background-radius: 20px;
     -fx-padding: 6px 9px;
-    -fx-text-fill: -fx-text-base-color;
+    -fx-text-fill: -fx-base;
+    -fx-font-weight: bold;
 }
 
 .pause-card {
@@ -307,6 +309,7 @@
 .folder-list .button {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
+    -fx-font-family: "Noto Sans Symbols 2", "Noto Sans Symbols", "DejaVu Sans";
     -fx-text-fill: derive(-fx-text-base-color, -5%);
     -fx-padding: 6px 4px;
 }

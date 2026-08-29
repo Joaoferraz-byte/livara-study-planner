@@ -48,12 +48,12 @@ import java.util.regex.Pattern;
 public final class StudyPlannerApp extends Application {
     private static final Pattern COLOR = Pattern.compile("\\\"%s\\\"\\s*:\\s*\\\"(#[0-9a-fA-F]{6})\\\"");
     private static final List<FolderShortcut> VAULT_FOLDERS = List.of(
-            new FolderShortcut("󰉋", "Black Box", "00 - Black Box"),
-            new FolderShortcut("󰈙", "Source Notes", "01 - Source Notes"),
-            new FolderShortcut("󰏗", "Projects", "02 - Projects"),
-            new FolderShortcut("󰃭", "Daily Notes", "03 - Daily Notes"),
-            new FolderShortcut("󰐕", "Xournal++", "04 - Xournal++"),
-            new FolderShortcut("󰂺", "References", "05 - References")
+            new FolderShortcut("⌂", "Black Box", "00 - Black Box"),
+            new FolderShortcut("▤", "Source Notes", "01 - Source Notes"),
+            new FolderShortcut("◆", "Projects", "02 - Projects"),
+            new FolderShortcut("◷", "Daily Notes", "03 - Daily Notes"),
+            new FolderShortcut("✎", "Xournal++", "04 - Xournal++"),
+            new FolderShortcut("◌", "References", "05 - References")
     );
 
     private static Path requestedPath;
@@ -142,7 +142,7 @@ public final class StudyPlannerApp extends Application {
         HBox templatePicker = new HBox(10, templateLabel, templateSelector);
         templatePicker.setAlignment(Pos.CENTER_LEFT);
 
-        MenuButton menu = new MenuButton("󰍜  Menu");
+        MenuButton menu = new MenuButton("☰  Menu");
         menu.getStyleClass().add("secondary-button");
         MenuItem reload = new MenuItem("Recarregar agenda");
         reload.setOnAction(event -> reloadSchedule());
@@ -210,7 +210,7 @@ public final class StudyPlannerApp extends Application {
         Label vaultHint = new Label("Acesse suas notas e projetos no Oil do Neovim.");
         vaultHint.setWrapText(true);
         vaultHint.getStyleClass().add("panel-description");
-        Button openVault = new Button("󰈙  Abrir Vault no Neovim");
+        Button openVault = new Button("⌂  Abrir Vault no Neovim");
         openVault.getStyleClass().add("primary-button");
         openVault.setMaxWidth(Double.MAX_VALUE);
         openVault.setOnAction(event -> openVaultInNvim());

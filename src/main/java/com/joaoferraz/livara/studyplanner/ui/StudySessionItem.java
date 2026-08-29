@@ -34,21 +34,21 @@ record StudySessionItem(
 
     static StudySessionItem breakItem(int order, int minutes) {
         return new StudySessionItem("pause-" + order, true, order, null, "Pausa",
-                "Afaste-se da tela, hidrate-se e volte com intenção", minutes, "󰒲");
+                "Afaste-se da tela, hidrate-se e volte com intenção", minutes, "◷");
     }
 
     private static String glyphFor(FocusArea focus) {
         return switch (focus) {
-            case MARKET_PROGRAMMING -> "󰆍";
-            case PROJECTS -> "󰙨";
-            case LOGIC -> "󰘦";
-            case ARCHITECTURE -> "󰙅";
-            case OPTIMIZATION -> "󰓅";
-            case PHYSICS -> "󰣖";
-            case BIOLOGY -> "󰀫";
-            case CHEMISTRY -> "󰸪";
-            case MATHEMATICS -> "󰃮";
-            case REVIEW -> "󰋚";
+            case MARKET_PROGRAMMING -> "⌘";
+            case PROJECTS -> "◆";
+            case LOGIC -> "∴";
+            case ARCHITECTURE -> "◇";
+            case OPTIMIZATION -> "↗";
+            case PHYSICS -> "∆";
+            case BIOLOGY -> "✣";
+            case CHEMISTRY -> "⚗";
+            case MATHEMATICS -> "∑";
+            case REVIEW -> "↺";
         };
     }
 }
