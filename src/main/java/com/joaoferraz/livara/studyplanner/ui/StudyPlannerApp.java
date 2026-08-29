@@ -10,28 +10,30 @@ import com.joaoferraz.livara.studyplanner.domain.WorkflowTemplate;
 import com.joaoferraz.livara.studyplanner.io.ProgressStore;
 import com.joaoferraz.livara.studyplanner.io.ScheduleStore;
 import javafx.application.Application;
-import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
-import javafx.scene.control.TitledPane;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.util.StringConverter;
+import javafx.geometry.Rectangle2D;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -41,34 +43,36 @@ import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class StudyPlannerApp extends Application {
     private static final Pattern COLOR = Pattern.compile("\\\"%s\\\"\\s*:\\s*\\\"(#[0-9a-fA-F]{6})\\\"");
-    private static final List<FolderShortcut> VAULT_FOLDERS = List.of(
-            new FolderShortcut("⌂", "Black Box", "00 - Black Box"),
-            new FolderShortcut("▤", "Source Notes", "01 - Source Notes"),
-            new FolderShortcut("◆", "Projects", "02 - Projects"),
-            new FolderShortcut("◷", "Daily Notes", "03 - Daily Notes"),
-            new FolderShortcut("✎", "Xournal++", "04 - Xournal++"),
-            new FolderShortcut("◌", "References", "05 - References")
-    );
+    private static final double WIDE_BREAKPOINT = 1040;
+    private static final List<String> VAULT_FOLDERS = List.of(
+            "Black Box", "Source Notes", "Projects", "Daily Notes", "Xournal++", "References");
 
     private static Path requestedPath;
 
     private final ScheduleStore store = new ScheduleStore();
     private final ScheduleService service = new ScheduleService(store);
     private final ProgressStore progressStore = new ProgressStore();
-    private final VBox sessionList = new VBox(10);
+    private final VBox sessionList = new VBox(8);
+    private final GridPane dashboardGrid = new GridPane();
     private final Label cycleLabel = new Label();
     private final Label progressLabel = new Label();
     private final Label statusLabel = new Label();
     private final Label focusDescription = new Label();
+    private final Label flowSummary = new Label();
     private final ProgressBar progressBar = new ProgressBar(0);
-    private final ComboBox<WorkflowTemplate> templateSelector = new ComboBox<>();
-    private boolean updatingTemplateSelector;
+    private final Label activeMetric = new Label();
+    private final Label remainingMetric = new Label();
+    private final Label rhythmMetric = new Label();
+    private final VBox sideColumn = new VBox(14);
+    private final VBox vaultPanel = new VBox(12);
+    private final VBox summaryPanel = new VBox(10);
+    private final VBox hero = new VBox(8);
+    private final MenuButton menu = new MenuButton("Menu");
     private ScheduleTemplate current;
     private ProgressState progress;
     private List<StudySessionItem> sessionItems = List.of();
@@ -88,7 +92,7 @@ public final class StudyPlannerApp extends Application {
             current = service.loadOrCreate(schedulePath);
             progress = progressStore.loadOrEmpty(progressPath, current.cycle(), current.workflowTemplate());
         } catch (IOException | RuntimeException exception) {
-            showError("Não foi possível carregar o cronograma", exception.getMessage());
+            showError("Unable to load schedule", exception.getMessage());
             current = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
             progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
         }
@@ -96,248 +100,370 @@ public final class StudyPlannerApp extends Application {
         BorderPane root = new BorderPane();
         root.getStyleClass().add("root");
         applyMatugenPalette(root);
-        root.setPadding(new Insets(26, 30, 20, 30));
+        root.setPadding(new Insets(22, 26, 16, 26));
 
-        root.setTop(buildHeader());
-        root.setCenter(buildSessionViewport());
-        root.setRight(buildSidePanel());
-        root.setBottom(buildFooter());
-        renderSession();
+        VBox shell = new VBox(16, buildTopBar(), buildHero(), buildDashboardGrid(), buildFooter());
+        shell.getStyleClass().add("dashboard-shell");
+        VBox.setVgrow(dashboardGrid, Priority.ALWAYS);
+        root.setCenter(shell);
 
-        Scene scene = new Scene(root, 1240, 820);
+        Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
+        double initialWidth = Math.min(1240, Math.max(720, bounds.getWidth() - 40));
+        double initialHeight = Math.min(820, Math.max(620, bounds.getHeight() - 60));
+        Scene scene = new Scene(root, initialWidth, initialHeight);
         scene.getStylesheets().add(Objects.requireNonNull(
                 getClass().getResource("/style.css"), "style.css resource is missing").toExternalForm());
+        scene.widthProperty().addListener((observable, oldValue, width) -> updateResponsiveLayout(width.doubleValue()));
         stage.setTitle("Livara Study Planner");
-        stage.setMinWidth(980);
-        stage.setMinHeight(660);
+        stage.setMinWidth(720);
+        stage.setMinHeight(620);
         stage.setScene(scene);
         stage.show();
+        updateResponsiveLayout(scene.getWidth());
+        renderSession();
     }
 
-    private VBox buildHeader() {
-        Label eyebrow = new Label("LIVARA  /  ESTUDO INTENCIONAL");
-        eyebrow.getStyleClass().add("eyebrow");
+    private HBox buildTopBar() {
+        Label brand = new Label("LIVARA");
+        brand.getStyleClass().add("brand-mark");
+        Label context = new Label("STUDY PLANNER");
+        context.getStyleClass().add("top-context");
+        HBox left = new HBox(10, brand, context);
+        left.setAlignment(Pos.CENTER_LEFT);
 
-        Label title = new Label("Sua próxima sessão, com clareza.");
-        title.getStyleClass().add("title");
-        Label subtitle = new Label("Um fluxo de foco e pausa que se adapta ao seu ciclo — sem uma tabela para administrar.");
-        subtitle.getStyleClass().add("subtitle");
-
-        templateSelector.setItems(FXCollections.observableArrayList(WorkflowTemplate.values()));
-        templateSelector.setConverter(new StringConverter<>() {
-            @Override
-            public String toString(WorkflowTemplate template) {
-                return template == null ? "" : template.label();
-            }
-
-            @Override
-            public WorkflowTemplate fromString(String value) {
-                return templateSelector.getValue();
-            }
-        });
-        templateSelector.setOnAction(event -> selectWorkflow(templateSelector.getValue()));
-        templateSelector.setPrefWidth(260);
-        Label templateLabel = new Label("Fluxo");
-        templateLabel.getStyleClass().add("field-label");
-        HBox templatePicker = new HBox(10, templateLabel, templateSelector);
-        templatePicker.setAlignment(Pos.CENTER_LEFT);
-
-        MenuButton menu = new MenuButton("☰  Menu");
-        menu.getStyleClass().add("secondary-button");
-        MenuItem reload = new MenuItem("Recarregar agenda");
+        menu.getStyleClass().add("menu-button");
+        javafx.scene.control.Menu workflowMenu = new javafx.scene.control.Menu("Workflow template");
+        MenuItem activeTemplate = new MenuItem(current.workflowTemplate().label() + " (active)");
+        activeTemplate.setDisable(true);
+        workflowMenu.getItems().add(activeTemplate);
+        MenuItem reload = new MenuItem("Reload schedule");
         reload.setOnAction(event -> reloadSchedule());
-        MenuItem validate = new MenuItem("Validar contrato");
+        MenuItem validate = new MenuItem("Validate schedule");
         validate.setOnAction(event -> validateCurrent());
-        MenuItem cycleA = new MenuItem("Aplicar ciclo A");
+        MenuItem cycleA = new MenuItem("Apply cycle A");
         cycleA.setOnAction(event -> setCycle(Cycle.A));
-        MenuItem cycleB = new MenuItem("Aplicar ciclo B");
+        MenuItem cycleB = new MenuItem("Apply cycle B");
         cycleB.setOnAction(event -> setCycle(Cycle.B));
-        MenuItem reset = new MenuItem("Limpar progresso da sessão");
+        MenuItem reset = new MenuItem("Reset session progress");
         reset.setOnAction(event -> resetProgress());
-        menu.getItems().addAll(reload, validate, cycleA, cycleB, reset);
+        menu.getItems().addAll(workflowMenu, new SeparatorMenuItem(), reload, validate,
+                new SeparatorMenuItem(), cycleA, cycleB, reset);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox controls = new HBox(12, templatePicker, spacer, menu);
-        controls.setAlignment(Pos.CENTER_LEFT);
-        controls.setPadding(new Insets(18, 0, 22, 0));
-
-        cycleLabel.getStyleClass().add("cycle-label");
-        VBox header = new VBox(8, eyebrow, title, subtitle, cycleLabel, controls);
-        header.getStyleClass().add("page-header");
-        return header;
+        HBox bar = new HBox(left, spacer, menu);
+        bar.setAlignment(Pos.CENTER_LEFT);
+        bar.getStyleClass().add("app-bar");
+        return bar;
     }
 
-    private ScrollPane buildSessionViewport() {
-        Label sectionTitle = new Label("Fluxo de hoje");
-        sectionTitle.getStyleClass().add("section-title");
-        Label sectionHint = new Label("Conclua cada foco e pausa; o próximo item fica destacado automaticamente.");
-        sectionHint.getStyleClass().add("section-hint");
-        VBox sectionHeader = new VBox(4, sectionTitle, sectionHint);
+    private VBox buildHero() {
+        Label eyebrow = new Label("TODAY'S SESSION");
+        eyebrow.getStyleClass().add("eyebrow");
+        Label title = new Label("Build a focused study rhythm.");
+        title.getStyleClass().add("hero-title");
+        Label subtitle = new Label("One clear sequence of focus blocks and recovery pauses. No weekly table to manage.");
+        subtitle.getStyleClass().add("hero-subtitle");
+        cycleLabel.getStyleClass().add("hero-meta");
+        focusDescription.setWrapText(true);
+        focusDescription.getStyleClass().add("hero-description");
+        hero.getChildren().setAll(eyebrow, title, subtitle, cycleLabel, focusDescription);
+        hero.getStyleClass().add("hero-widget");
+        return hero;
+    }
+
+    private GridPane buildDashboardGrid() {
+        dashboardGrid.getStyleClass().add("dashboard-grid");
+        dashboardGrid.setHgap(14);
+        dashboardGrid.setVgap(14);
+        dashboardGrid.setMaxWidth(Double.MAX_VALUE);
+        dashboardGrid.add(buildMetricsWidget(), 0, 0, 2, 1);
+
+        VBox flowWidget = buildFlowWidget();
+        sideColumn.getStyleClass().add("widget-column");
+        sideColumn.getChildren().setAll(buildSummaryWidget(), buildVaultWidget());
+        dashboardGrid.add(flowWidget, 0, 1);
+        dashboardGrid.add(sideColumn, 1, 1);
+        GridPane.setHgrow(flowWidget, Priority.ALWAYS);
+        GridPane.setVgrow(flowWidget, Priority.ALWAYS);
+        GridPane.setHgrow(sideColumn, Priority.SOMETIMES);
+        GridPane.setVgrow(sideColumn, Priority.ALWAYS);
+        return dashboardGrid;
+    }
+
+    private VBox buildMetricsWidget() {
+        VBox widget = widget("SESSION OVERVIEW");
+        GridPane metrics = new GridPane();
+        metrics.setHgap(10);
+        metrics.setMaxWidth(Double.MAX_VALUE);
+        metrics.getStyleClass().add("metrics-grid");
+        metrics.add(metric("ACTIVE", activeMetric, "next focus"), 0, 0);
+        metrics.add(metric("PROGRESS", progressLabel, "focus blocks"), 1, 0);
+        metrics.add(metric("RHYTHM", rhythmMetric, "focus · pause"), 2, 0);
+        for (int column = 0; column < 3; column++) {
+            ColumnConstraints constraints = new ColumnConstraints();
+            constraints.setPercentWidth(33.333);
+            constraints.setHgrow(Priority.ALWAYS);
+            metrics.getColumnConstraints().add(constraints);
+        }
+        widget.getChildren().add(metrics);
+        return widget;
+    }
+
+    private VBox metric(String labelText, Label value, String hint) {
+        Label label = new Label(labelText);
+        label.getStyleClass().add("metric-label");
+        value.getStyleClass().add("metric-value");
+        Label caption = new Label(hint);
+        caption.getStyleClass().add("metric-hint");
+        VBox metric = new VBox(5, label, value, caption);
+        metric.getStyleClass().add("metric-card");
+        metric.setMaxWidth(Double.MAX_VALUE);
+        return metric;
+    }
+
+    private VBox buildFlowWidget() {
+        Label title = new Label("Today's flow");
+        title.getStyleClass().add("widget-title");
+        flowSummary.getStyleClass().add("widget-subtitle");
+        VBox heading = new VBox(3, title, flowSummary);
+        heading.getStyleClass().add("widget-heading");
 
         sessionList.getStyleClass().add("session-list");
-        VBox content = new VBox(18, sectionHeader, sessionList);
-        content.getStyleClass().add("session-content");
-        content.setPadding(new Insets(0, 22, 0, 0));
-        VBox.setVgrow(sessionList, Priority.ALWAYS);
+        sessionList.setFillWidth(true);
+        VBox flowContent = new VBox(12, heading, sessionList);
+        flowContent.getStyleClass().add("flow-content");
+        flowContent.setFillWidth(true);
 
-        ScrollPane viewport = new ScrollPane(content);
-        viewport.setFitToWidth(true);
-        viewport.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        viewport.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        viewport.getStyleClass().add("session-viewport");
-        return viewport;
+        ScrollPane scroll = new ScrollPane(flowContent);
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.getStyleClass().add("flow-scroll");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        VBox widget = widget(null);
+        widget.setMinHeight(260);
+        widget.setPrefHeight(420);
+        widget.getStyleClass().add("flow-widget");
+        widget.getChildren().add(scroll);
+        VBox.setVgrow(widget, Priority.ALWAYS);
+        return widget;
     }
 
-    private VBox buildSidePanel() {
-        Label today = new Label("HOJE");
-        today.getStyleClass().add("panel-eyebrow");
-        progressLabel.getStyleClass().add("progress-number");
+    private VBox buildSummaryWidget() {
+        Label title = new Label("Session status");
+        title.getStyleClass().add("widget-title");
         progressBar.setMaxWidth(Double.MAX_VALUE);
         progressBar.getStyleClass().add("progress-bar");
-        Label rhythm = new Label("Ritmo recomendado");
-        rhythm.getStyleClass().add("panel-label");
-        Label rhythmValue = new Label("60 min foco  ·  15 min pausa");
-        rhythmValue.getStyleClass().add("panel-value");
-        focusDescription.setWrapText(true);
-        focusDescription.getStyleClass().add("panel-description");
+        remainingMetric.getStyleClass().add("summary-value");
+        Label caption = new Label("The next incomplete item is highlighted. Completing every focus and pause advances the cycle automatically.");
+        caption.setWrapText(true);
+        caption.getStyleClass().add("widget-copy");
+        summaryPanel.getChildren().setAll(title, remainingMetric, progressBar, caption);
+        summaryPanel.getStyleClass().add("widget");
+        return summaryPanel;
+    }
 
-        VBox progressPanel = new VBox(10, today, progressLabel, progressBar, rhythm, rhythmValue, focusDescription);
-        progressPanel.getStyleClass().add("side-card");
-
-        Label vaultTitle = new Label("Vault");
-        vaultTitle.getStyleClass().add("panel-title");
-        Label vaultHint = new Label("Acesse suas notas e projetos no Oil do Neovim.");
-        vaultHint.setWrapText(true);
-        vaultHint.getStyleClass().add("panel-description");
-        Button openVault = new Button("⌂  Abrir Vault no Neovim");
+    private VBox buildVaultWidget() {
+        Label title = new Label("Vault");
+        title.getStyleClass().add("widget-title");
+        Label hint = new Label("Open notes and projects in Oil through Neovim.");
+        hint.setWrapText(true);
+        hint.getStyleClass().add("widget-copy");
+        Button openVault = new Button("Open Vault in Neovim");
         openVault.getStyleClass().add("primary-button");
         openVault.setMaxWidth(Double.MAX_VALUE);
         openVault.setOnAction(event -> openVaultInNvim());
 
-        VBox folders = new VBox(5);
+        VBox folders = new VBox(2);
         folders.getStyleClass().add("folder-list");
-        for (FolderShortcut folder : VAULT_FOLDERS) {
-            Button shortcut = new Button(folder.glyph() + "  " + folder.label());
+        for (String folder : VAULT_FOLDERS) {
+            Button shortcut = new Button(folder);
             shortcut.getStyleClass().add("folder-link");
             shortcut.setMaxWidth(Double.MAX_VALUE);
             shortcut.setAlignment(Pos.CENTER_LEFT);
-            shortcut.setOnAction(event -> openVaultFolderInNvim(folder.relativePath()));
+            shortcut.setOnAction(event -> openVaultFolderInNvim(folder));
             folders.getChildren().add(shortcut);
         }
-        VBox vaultPanel = new VBox(12, vaultTitle, vaultHint, openVault, new Separator(), folders);
-        vaultPanel.getStyleClass().add("side-card");
+        vaultPanel.getChildren().setAll(title, hint, openVault, new Separator(), folders);
+        vaultPanel.getStyleClass().add("widget");
+        return vaultPanel;
+    }
 
-        VBox side = new VBox(16, progressPanel, vaultPanel);
-        side.getStyleClass().add("side-panel");
-        side.setPrefWidth(290);
-        side.setPadding(new Insets(0, 0, 0, 8));
-        return side;
+    private VBox widget(String eyebrowText) {
+        VBox widget = new VBox(10);
+        widget.getStyleClass().add("widget");
+        if (eyebrowText != null) {
+            Label eyebrow = new Label(eyebrowText);
+            eyebrow.getStyleClass().add("widget-eyebrow");
+            widget.getChildren().add(eyebrow);
+        }
+        return widget;
     }
 
     private HBox buildFooter() {
         statusLabel.getStyleClass().add("status");
         HBox footer = new HBox(statusLabel);
         footer.setAlignment(Pos.CENTER_LEFT);
-        footer.setPadding(new Insets(18, 0, 0, 0));
+        footer.getStyleClass().add("status-bar");
         return footer;
     }
 
+    private void updateResponsiveLayout(double width) {
+        boolean wide = width >= WIDE_BREAKPOINT;
+        dashboardGrid.getStyleClass().removeAll("layout-wide", "layout-compact");
+        dashboardGrid.getStyleClass().add(wide ? "layout-wide" : "layout-compact");
+        dashboardGrid.getColumnConstraints().clear();
+        dashboardGrid.getRowConstraints().clear();
+        javafx.scene.layout.RowConstraints overviewRow = new javafx.scene.layout.RowConstraints();
+        overviewRow.setVgrow(Priority.NEVER);
+        overviewRow.setFillHeight(true);
+        dashboardGrid.getRowConstraints().add(overviewRow);
+        javafx.scene.layout.RowConstraints contentRow = new javafx.scene.layout.RowConstraints();
+        contentRow.setVgrow(Priority.ALWAYS);
+        contentRow.setFillHeight(true);
+        dashboardGrid.getRowConstraints().add(contentRow);
+        ColumnConstraints primary = new ColumnConstraints();
+        primary.setHgrow(Priority.ALWAYS);
+        primary.setFillWidth(true);
+        dashboardGrid.getColumnConstraints().add(primary);
+        if (wide) {
+            ColumnConstraints secondary = new ColumnConstraints();
+            secondary.setMinWidth(260);
+            secondary.setPrefWidth(290);
+            secondary.setMaxWidth(340);
+            secondary.setHgrow(Priority.SOMETIMES);
+            secondary.setFillWidth(true);
+            dashboardGrid.getColumnConstraints().add(secondary);
+            if (dashboardGrid.getChildren().size() > 2) {
+                Node flow = dashboardGrid.getChildren().get(1);
+                GridPane.setColumnIndex(flow, 0);
+                GridPane.setColumnSpan(flow, 1);
+                GridPane.setColumnIndex(sideColumn, 1);
+                GridPane.setRowIndex(sideColumn, 1);
+            }
+        } else {
+            javafx.scene.layout.RowConstraints sideRow = new javafx.scene.layout.RowConstraints();
+            sideRow.setVgrow(Priority.NEVER);
+            sideRow.setFillHeight(true);
+            dashboardGrid.getRowConstraints().add(sideRow);
+            if (dashboardGrid.getChildren().size() > 2) {
+                Node flow = dashboardGrid.getChildren().get(1);
+                GridPane.setColumnIndex(flow, 0);
+                GridPane.setColumnSpan(flow, 1);
+                GridPane.setColumnIndex(sideColumn, 0);
+                GridPane.setRowIndex(sideColumn, 2);
+            }
+        }
+    }
+
     private void renderSession() {
-        updatingTemplateSelector = true;
-        templateSelector.setValue(current.workflowTemplate());
-        updatingTemplateSelector = false;
         sessionItems = sessionItems(current);
         sessionList.getChildren().clear();
         for (int index = 0; index < sessionItems.size(); index++) {
             StudySessionItem item = sessionItems.get(index);
-            sessionList.getChildren().add(item.pause() ? pauseCard(item, index) : studyCard(item, index));
+            Node card = item.pause() ? pauseCard(item, index) : studyCard(item, index);
+            card.setManaged(true);
+            sessionList.getChildren().add(card);
         }
 
         long totalStudy = sessionItems.stream().filter(item -> !item.pause()).count();
         long completedStudy = sessionItems.stream()
                 .filter(item -> !item.pause() && progress.isCompleted(item.id()))
                 .count();
+        long completedItems = sessionItems.stream().filter(item -> progress.isCompleted(item.id())).count();
+        long remainingItems = sessionItems.size() - completedItems;
         double ratio = totalStudy == 0 ? 0 : (double) completedStudy / totalStudy;
-        progressLabel.setText(completedStudy + " / " + totalStudy + " blocos concluídos");
+        activeMetric.setText(nextPendingIndex() < 0 ? "Complete" : "Block " + (nextPendingIndex() + 1));
+        progressLabel.setText(completedStudy + " / " + totalStudy);
+        rhythmMetric.setText("60 / 15");
+        remainingMetric.setText(remainingItems + " items remaining");
         progressBar.setProgress(ratio);
-        cycleLabel.setText(current.workflowTemplate().label() + "  ·  " + current.cycle().label()
-                + "  ·  " + totalStudy + " focos + pausas");
+        cycleLabel.setText(current.workflowTemplate().label() + "  ·  Cycle " + current.cycle().label());
         focusDescription.setText(current.workflowTemplate().description());
-        statusLabel.setText("Salvamento automático  ·  " + schedulePath);
+        flowSummary.setText(totalStudy + " focus blocks · " + (sessionItems.size() - totalStudy) + " recovery pauses");
+        statusLabel.setText("Auto-saved  ·  " + schedulePath);
     }
 
-    private TitledPane studyCard(StudySessionItem item, int index) {
-        CheckBox done = new CheckBox();
-        done.setSelected(progress.isCompleted(item.id()));
-        done.setOnAction(event -> toggleItem(item));
-        done.getStyleClass().add("item-check");
-
-        Label glyph = new Label(item.glyph());
-        glyph.getStyleClass().add("item-glyph");
+    private VBox studyCard(StudySessionItem item, int index) {
+        CheckBox done = checkBox(item);
         Label order = new Label(String.format("%02d", item.order()));
         order.getStyleClass().add("item-order");
-        VBox indexBox = new VBox(2, order, glyph);
-        indexBox.setAlignment(Pos.CENTER);
-        indexBox.setMinWidth(42);
-
         Label title = new Label(item.title());
         title.getStyleClass().add("item-title");
         Label subtitle = new Label(item.subtitle());
         subtitle.getStyleClass().add("item-subtitle");
-        VBox copy = new VBox(5, title, subtitle);
+        subtitle.setWrapText(true);
+        VBox copy = new VBox(3, title, subtitle);
+        copy.getStyleClass().add("item-copy");
         HBox.setHgrow(copy, Priority.ALWAYS);
 
         Label duration = new Label(item.durationMinutes() + " min");
         duration.getStyleClass().add("duration-chip");
-        HBox card = new HBox(14, done, indexBox, copy, duration);
-        card.setAlignment(Pos.CENTER_LEFT);
+        HBox header = new HBox(10, done, order, copy, duration);
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.getStyleClass().add("session-header");
+
+        Label detail = new Label("Focus: " + item.focus().label() + "  ·  60 minutes of deliberate practice");
+        detail.getStyleClass().add("item-detail");
+        detail.setWrapText(true);
+        VBox card = new VBox(0, header, detail);
         card.getStyleClass().addAll("session-card", "study-card");
+        configureCardState(card, detail, item, index);
+        return card;
+    }
+
+    private VBox pauseCard(StudySessionItem item, int index) {
+        CheckBox done = checkBox(item);
+        Label title = new Label("Recovery pause");
+        title.getStyleClass().add("pause-title");
+        Label subtitle = new Label("Step away, hydrate, and return with intention");
+        subtitle.getStyleClass().add("pause-subtitle");
+        VBox copy = new VBox(2, title, subtitle);
+        HBox.setHgrow(copy, Priority.ALWAYS);
+        Label duration = new Label(item.durationMinutes() + " min");
+        duration.getStyleClass().add("duration-chip");
+        HBox header = new HBox(10, done, copy, duration);
+        header.setAlignment(Pos.CENTER_LEFT);
+        VBox card = new VBox(header);
+        card.getStyleClass().addAll("session-card", "pause-card");
+        configureCardState(card, null, item, index);
+        return card;
+    }
+
+    private CheckBox checkBox(StudySessionItem item) {
+        CheckBox done = new CheckBox();
+        done.setSelected(progress.isCompleted(item.id()));
+        done.setMnemonicParsing(false);
+        done.setOnAction(event -> toggleItem(item));
+        done.getStyleClass().add("item-check");
+        return done;
+    }
+
+    private void configureCardState(VBox card, Label detail, StudySessionItem item, int index) {
         boolean completed = progress.isCompleted(item.id());
         if (completed) {
             card.getStyleClass().add("completed");
+        } else {
+            card.getStyleClass().add("pending");
         }
         if (isActive(index)) {
             card.getStyleClass().add("active");
         }
-
-        Label detail = new Label("Foco: " + item.focus().label() + "  ·  "
-                + item.durationMinutes() + " min  ·  pausa seguinte: 15 min");
-        detail.getStyleClass().add("item-detail");
-        TitledPane pane = new TitledPane("", detail);
-        pane.setGraphic(card);
-        pane.setExpanded(!completed);
-        pane.setAnimated(false);
-        pane.getStyleClass().add("session-expander");
-        if (completed) {
-            pane.getStyleClass().add("completed");
+        if (detail != null) {
+            detail.setVisible(!completed);
+            detail.setManaged(!completed);
+            card.setOnMouseClicked(event -> {
+                if (!(event.getTarget() instanceof CheckBox)) {
+                    boolean visible = !detail.isVisible();
+                    detail.setVisible(visible);
+                    detail.setManaged(visible);
+                }
+            });
         }
-        return pane;
-    }
-
-    private HBox pauseCard(StudySessionItem item, int index) {
-        CheckBox done = new CheckBox();
-        done.setSelected(progress.isCompleted(item.id()));
-        done.setOnAction(event -> toggleItem(item));
-        done.getStyleClass().add("item-check");
-
-        Label glyph = new Label(item.glyph());
-        glyph.getStyleClass().add("pause-glyph");
-        VBox copy = new VBox(3, new Label(item.title()), new Label(item.subtitle()));
-        copy.getStyleClass().add("pause-copy");
-        HBox.setHgrow(copy, Priority.ALWAYS);
-        Label duration = new Label(item.durationMinutes() + " min");
-        duration.getStyleClass().add("duration-chip");
-        HBox card = new HBox(14, done, glyph, copy, duration);
-        card.setAlignment(Pos.CENTER_LEFT);
-        card.getStyleClass().addAll("session-card", "pause-card");
-        if (progress.isCompleted(item.id())) {
-            card.getStyleClass().add("completed");
-        }
-        if (isActive(index)) {
-            card.getStyleClass().add("active");
-        }
-        return card;
+        card.setMaxWidth(Double.MAX_VALUE);
+        VBox.setVgrow(card, Priority.NEVER);
     }
 
     private boolean isActive(int index) {
@@ -368,29 +494,15 @@ public final class StudyPlannerApp extends Application {
                 && sessionItems.stream().allMatch(item -> progress.isCompleted(item.id()));
     }
 
-    private void selectWorkflow(WorkflowTemplate workflowTemplate) {
-        if (updatingTemplateSelector || workflowTemplate == null
-                || current.workflowTemplate() == workflowTemplate) {
-            return;
-        }
-        current = DefaultScheduleFactory.create(current.cycle(), workflowTemplate);
-        progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
-        persistSchedule();
-        persistProgress();
-        statusLabel.setText("Fluxo " + workflowTemplate.label() + " aplicado e salvo automaticamente.");
-        renderSession();
-    }
-
     private void setCycle(Cycle cycle) {
         if (current.cycle() == cycle) {
-            statusLabel.setText("O " + cycle.label() + " já está ativo.");
+            statusLabel.setText("Cycle " + cycle.label() + " is already active.");
             return;
         }
         current = DefaultScheduleFactory.create(cycle, current.workflowTemplate());
         progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
         persistSchedule();
         persistProgress();
-        statusLabel.setText("" + cycle.label() + " aplicado automaticamente.");
         renderSession();
     }
 
@@ -401,9 +513,9 @@ public final class StudyPlannerApp extends Application {
             persistSchedule();
             persistProgress();
             renderSession();
-            statusLabel.setText("Sessão concluída. " + current.cycle().label() + " foi ativado automaticamente.");
+            statusLabel.setText("Session complete. Cycle " + current.cycle().label() + " is active.");
         } catch (RuntimeException exception) {
-            showError("Não foi possível mudar o ciclo", exception.getMessage());
+            showError("Unable to change cycle", exception.getMessage());
         }
     }
 
@@ -411,7 +523,7 @@ public final class StudyPlannerApp extends Application {
         try {
             service.save(schedulePath, current);
         } catch (IOException | RuntimeException exception) {
-            showError("Não foi possível salvar a agenda", exception.getMessage());
+            showError("Unable to save schedule", exception.getMessage());
         }
     }
 
@@ -419,7 +531,7 @@ public final class StudyPlannerApp extends Application {
         try {
             progressStore.save(progressPath, progress);
         } catch (IOException | RuntimeException exception) {
-            showError("Não foi possível salvar o progresso", exception.getMessage());
+            showError("Unable to save progress", exception.getMessage());
         }
     }
 
@@ -428,9 +540,9 @@ public final class StudyPlannerApp extends Application {
             current = service.loadOrCreate(schedulePath);
             progress = progressStore.loadOrEmpty(progressPath, current.cycle(), current.workflowTemplate());
             renderSession();
-            statusLabel.setText("Agenda recarregada.");
+            statusLabel.setText("Schedule reloaded.");
         } catch (IOException | RuntimeException exception) {
-            showError("Não foi possível recarregar a agenda", exception.getMessage());
+            showError("Unable to reload schedule", exception.getMessage());
         }
     }
 
@@ -438,15 +550,15 @@ public final class StudyPlannerApp extends Application {
         progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
         persistProgress();
         renderSession();
-        statusLabel.setText("Progresso da sessão limpo.");
+        statusLabel.setText("Session progress reset.");
     }
 
     private void validateCurrent() {
         List<String> errors = service.validate(current);
         if (errors.isEmpty()) {
-            showInfo("Contrato válido", "A agenda segue o contrato de blocos de 60 minutos e pausas de 15 minutos.");
+            showInfo("Schedule is valid", "The schedule follows the 60-minute focus and 15-minute pause contract.");
         } else {
-            showError("Agenda precisa de revisão", String.join("\n", errors));
+            showError("Schedule needs review", String.join("\n", errors));
         }
     }
 
@@ -459,7 +571,7 @@ public final class StudyPlannerApp extends Application {
                 System.getProperty("user.home") + "/Vault"));
         Path target = relativePath.isBlank() ? vault : vault.resolve(relativePath);
         if (!Files.isDirectory(target)) {
-            statusLabel.setText("Pasta do Vault não encontrada: " + target);
+            statusLabel.setText("Vault folder not found: " + target);
             return;
         }
         String oilCommand = "Oil " + vimEscape(target.toString());
@@ -470,14 +582,14 @@ public final class StudyPlannerApp extends Application {
                 List.of("nvim", "-c", oilCommand))) {
             try {
                 new ProcessBuilder(command).start();
-                statusLabel.setText("Neovim aberto no Oil: " + target);
+                statusLabel.setText("Neovim opened in Oil: " + target);
                 return;
             } catch (IOException exception) {
                 failure = exception;
             }
         }
-        statusLabel.setText("Não foi possível abrir o Neovim: "
-                + (failure == null ? "nenhum terminal disponível" : failure.getMessage()));
+        statusLabel.setText("Unable to open Neovim: "
+                + (failure == null ? "no terminal available" : failure.getMessage()));
     }
 
     private static String vimEscape(String value) {
@@ -518,7 +630,7 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void showError(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, message == null ? "Erro sem detalhes" : message);
+        Alert alert = new Alert(Alert.AlertType.ERROR, message == null ? "Unknown error" : message);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.showAndWait();
@@ -548,6 +660,4 @@ public final class StudyPlannerApp extends Application {
         return Path.of(stateHome, "livara", "study-schedule.json");
     }
 
-    private record FolderShortcut(String glyph, String label, String relativePath) {
-    }
 }

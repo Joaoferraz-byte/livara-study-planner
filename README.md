@@ -6,9 +6,9 @@ The default workflow contains eight one-hour focus blocks with fifteen-minute pa
 
 ## Dashboard
 
-The JavaFX screen is organized around the next session, not weekdays. Each focus block and pause is rendered as a card with a checkbox, semantic icon, duration, and active-state highlight. Completing a focus or pause is persisted automatically in a sidecar file next to the schedule. Completing all focus blocks advances from cycle A to B or from B to A automatically and resets only execution progress; the reusable workflow template remains selected.
+The JavaFX screen is organized around the next session, not weekdays. Each focus block and pause is rendered as a compact widget card with a small checkbox, duration chip, and active-state rail. Completing a focus or pause is persisted automatically in a sidecar file next to the schedule. Completing every focus and pause item advances from cycle A to B or from B to A automatically and resets only execution progress; the reusable workflow template remains selected.
 
-The workflow selector offers market programming, applied projects, logic and implementation, software architecture, software optimization, and school subjects. The menu contains secondary actions such as validation, reload, manual cycle selection, and progress reset. The Vault panel provides a desktop shortcut to open the Vault in Oil through footclient, WezTerm, or a direct Neovim fallback and lists the main Vault areas with their semantic folder icons.
+The main workflow stays fixed during normal execution. The menu contains the workflow-template setting and secondary actions such as validation, reload, manual cycle selection, and progress reset. The template setting is intentionally not shown as an input in the dashboard. The responsive widget grid places the session flow beside status and Vault widgets on wide windows, then stacks them on compact windows. The Vault panel provides a desktop shortcut to open the Vault in Oil through footclient, WezTerm, or a direct Neovim fallback and lists the main Vault areas as compact text actions.
 
 ## Design
 

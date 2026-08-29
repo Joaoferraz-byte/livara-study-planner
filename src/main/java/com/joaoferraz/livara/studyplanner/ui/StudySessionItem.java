@@ -33,8 +33,8 @@ record StudySessionItem(
     }
 
     static StudySessionItem breakItem(int order, int minutes) {
-        return new StudySessionItem("pause-" + order, true, order, null, "Pausa",
-                "Afaste-se da tela, hidrate-se e volte com intenção", minutes, "◷");
+        return new StudySessionItem("pause-" + order, true, order, null, "Recovery pause",
+                "Step away, hydrate, and return with intention", minutes, "◷");
     }
 
     private static String glyphFor(FocusArea focus) {
