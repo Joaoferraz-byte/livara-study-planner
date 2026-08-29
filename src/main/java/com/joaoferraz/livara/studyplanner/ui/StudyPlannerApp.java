@@ -22,15 +22,20 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.Separator;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Arc;
+import javafx.scene.shape.ArcType;
+import javafx.scene.shape.Circle;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.geometry.Rectangle2D;
@@ -68,10 +73,15 @@ public final class StudyPlannerApp extends Application {
     private final Label activeMetric = new Label();
     private final Label remainingMetric = new Label();
     private final Label rhythmMetric = new Label();
+    private final Label rotationValue = new Label();
+    private final Label completedCyclesValue = new Label();
     private final VBox sideColumn = new VBox(14);
     private final VBox vaultPanel = new VBox(12);
     private final VBox summaryPanel = new VBox(10);
     private final VBox hero = new VBox(8);
+    private final StackPane progressRing = new StackPane();
+    private final Arc progressArc = new Arc();
+    private final Label progressRingValue = new Label();
     private final MenuButton menu = new MenuButton("Menu");
     private ScheduleTemplate current;
     private ProgressState progress;
@@ -97,20 +107,24 @@ public final class StudyPlannerApp extends Application {
             progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
         }
 
-        BorderPane root = new BorderPane();
-        root.getStyleClass().add("root");
-        applyMatugenPalette(root);
-        root.setPadding(new Insets(22, 26, 16, 26));
-
+        StackPane sceneRoot = new StackPane();
+        sceneRoot.getStyleClass().add("root");
+        applyMatugenPalette(sceneRoot);
+        Pane ambient = buildAmbientLayer();
+        BorderPane contentRoot = new BorderPane();
+        contentRoot.setPadding(new Insets(22, 26, 16, 26));
+        contentRoot.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        StackPane.setAlignment(contentRoot, Pos.TOP_LEFT);
         VBox shell = new VBox(16, buildTopBar(), buildHero(), buildDashboardGrid(), buildFooter());
         shell.getStyleClass().add("dashboard-shell");
         VBox.setVgrow(dashboardGrid, Priority.ALWAYS);
-        root.setCenter(shell);
+        contentRoot.setCenter(shell);
+        sceneRoot.getChildren().addAll(ambient, contentRoot);
 
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
         double initialWidth = Math.min(1240, Math.max(720, bounds.getWidth() - 40));
         double initialHeight = Math.min(820, Math.max(620, bounds.getHeight() - 60));
-        Scene scene = new Scene(root, initialWidth, initialHeight);
+        Scene scene = new Scene(sceneRoot, initialWidth, initialHeight);
         scene.getStylesheets().add(Objects.requireNonNull(
                 getClass().getResource("/style.css"), "style.css resource is missing").toExternalForm());
         scene.widthProperty().addListener((observable, oldValue, width) -> updateResponsiveLayout(width.doubleValue()));
@@ -121,6 +135,24 @@ public final class StudyPlannerApp extends Application {
         stage.show();
         updateResponsiveLayout(scene.getWidth());
         renderSession();
+    }
+
+    private Pane buildAmbientLayer() {
+        Pane ambient = new Pane();
+        ambient.setMouseTransparent(true);
+        ambient.getStyleClass().add("ambient-layer");
+        Circle halo = new Circle();
+        halo.getStyleClass().add("ambient-halo");
+        halo.centerXProperty().bind(ambient.widthProperty().multiply(.88));
+        halo.centerYProperty().bind(ambient.heightProperty().multiply(.04));
+        halo.radiusProperty().bind(ambient.widthProperty().multiply(.28));
+        Circle orbit = new Circle();
+        orbit.getStyleClass().add("ambient-orbit");
+        orbit.centerXProperty().bind(ambient.widthProperty().multiply(.96));
+        orbit.centerYProperty().bind(ambient.heightProperty().multiply(.14));
+        orbit.radiusProperty().bind(ambient.widthProperty().multiply(.24));
+        ambient.getChildren().addAll(halo, orbit);
+        return ambient;
     }
 
     private HBox buildTopBar() {
@@ -167,7 +199,31 @@ public final class StudyPlannerApp extends Application {
         cycleLabel.getStyleClass().add("hero-meta");
         focusDescription.setWrapText(true);
         focusDescription.getStyleClass().add("hero-description");
-        hero.getChildren().setAll(eyebrow, title, subtitle, cycleLabel, focusDescription);
+
+        Circle track = new Circle(52);
+        track.getStyleClass().add("progress-ring-track");
+        progressArc.setCenterX(0);
+        progressArc.setCenterY(0);
+        progressArc.setRadiusX(52);
+        progressArc.setRadiusY(52);
+        progressArc.setStartAngle(90);
+        progressArc.setLength(0);
+        progressArc.setType(ArcType.OPEN);
+        progressArc.getStyleClass().add("progress-ring-arc");
+        progressRingValue.getStyleClass().add("progress-ring-value");
+        progressRing.getChildren().setAll(track, progressArc, progressRingValue);
+        progressRing.setMinSize(112, 112);
+        progressRing.setPrefSize(112, 112);
+        progressRing.setMaxSize(112, 112);
+        progressRing.getStyleClass().add("progress-ring");
+
+        VBox copy = new VBox(7, eyebrow, title, subtitle, cycleLabel, focusDescription);
+        copy.getStyleClass().add("hero-copy");
+        copy.setMinWidth(0);
+        HBox heroContent = new HBox(22, copy, progressRing);
+        heroContent.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(copy, Priority.ALWAYS);
+        hero.getChildren().setAll(heroContent);
         hero.getStyleClass().add("hero-widget");
         return hero;
     }
@@ -260,9 +316,27 @@ public final class StudyPlannerApp extends Application {
         Label caption = new Label("The next incomplete item is highlighted. Completing every focus and pause advances the cycle automatically.");
         caption.setWrapText(true);
         caption.getStyleClass().add("widget-copy");
-        summaryPanel.getChildren().setAll(title, remainingMetric, progressBar, caption);
+        rotationValue.getStyleClass().add("summary-row-value");
+        completedCyclesValue.getStyleClass().add("summary-row-value");
+        Label rotationLabel = new Label("CURRENT ROTATION");
+        rotationLabel.getStyleClass().add("summary-row-label");
+        Label completedLabel = new Label("COMPLETED CYCLES");
+        completedLabel.getStyleClass().add("summary-row-label");
+        HBox rotationRow = summaryRow(rotationLabel, rotationValue);
+        HBox completedRow = summaryRow(completedLabel, completedCyclesValue);
+        summaryPanel.getChildren().setAll(title, remainingMetric, progressBar, caption,
+                new Separator(), rotationRow, completedRow);
         summaryPanel.getStyleClass().add("widget");
         return summaryPanel;
+    }
+
+    private HBox summaryRow(Label label, Label value) {
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox row = new HBox(10, label, spacer, value);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getStyleClass().add("summary-row");
+        return row;
     }
 
     private VBox buildVaultWidget() {
@@ -379,7 +453,11 @@ public final class StudyPlannerApp extends Application {
         progressLabel.setText(completedStudy + " / " + totalStudy);
         rhythmMetric.setText("60 / 15");
         remainingMetric.setText(remainingItems + " items remaining");
+        rotationValue.setText("Cycle " + current.cycle().label() + "  ·  " + current.cycle().subjects());
+        completedCyclesValue.setText("0");
         progressBar.setProgress(ratio);
+        progressRingArc(ratio);
+        progressRingValue.setText(completedStudy + " / " + totalStudy);
         cycleLabel.setText(current.workflowTemplate().label() + "  ·  Cycle " + current.cycle().label());
         focusDescription.setText(current.workflowTemplate().description());
         flowSummary.setText(totalStudy + " focus blocks · " + (sessionItems.size() - totalStudy) + " recovery pauses");
@@ -405,9 +483,7 @@ public final class StudyPlannerApp extends Application {
         header.setAlignment(Pos.CENTER_LEFT);
         header.getStyleClass().add("session-header");
 
-        Label detail = new Label("Focus: " + item.focus().label() + "  ·  60 minutes of deliberate practice");
-        detail.getStyleClass().add("item-detail");
-        detail.setWrapText(true);
+        VBox detail = buildStudyDetails(item);
         VBox card = new VBox(0, header, detail);
         card.getStyleClass().addAll("session-card", "study-card");
         configureCardState(card, detail, item, index);
@@ -441,7 +517,47 @@ public final class StudyPlannerApp extends Application {
         return done;
     }
 
-    private void configureCardState(VBox card, Label detail, StudySessionItem item, int index) {
+    private VBox buildStudyDetails(StudySessionItem item) {
+        Label focusChip = new Label("60 min focus block");
+        Label pauseChip = new Label("15 min recovery");
+        focusChip.getStyleClass().add("detail-chip");
+        pauseChip.getStyleClass().addAll("detail-chip", "detail-chip-secondary");
+        HBox chips = new HBox(7, focusChip, pauseChip);
+        chips.getStyleClass().add("detail-chips");
+
+        Label callout = new Label("Strategy  ·  " + item.focus().label() + " practice");
+        callout.setWrapText(true);
+        callout.getStyleClass().add("strategy-callout");
+
+        VBox tasks = new VBox(0,
+                taskRow("01", "Recall", "Recover the most important concepts without consulting notes."),
+                taskRow("02", "Practice", "Work through one representative problem or implementation."),
+                taskRow("03", "Apply", "Record one result, question, or decision for the next session."));
+        tasks.getStyleClass().add("task-list");
+        VBox detail = new VBox(10, chips, callout, tasks);
+        detail.getStyleClass().add("item-detail");
+        detail.setVisible(false);
+        detail.setManaged(false);
+        return detail;
+    }
+
+    private HBox taskRow(String order, String title, String description) {
+        Label number = new Label(order);
+        number.getStyleClass().add("task-number");
+        Label taskTitle = new Label(title);
+        taskTitle.getStyleClass().add("task-title");
+        Label taskText = new Label(description);
+        taskText.setWrapText(true);
+        taskText.getStyleClass().add("task-text");
+        VBox copy = new VBox(2, taskTitle, taskText);
+        HBox.setHgrow(copy, Priority.ALWAYS);
+        HBox row = new HBox(10, number, copy);
+        row.setAlignment(Pos.TOP_LEFT);
+        row.getStyleClass().add("task-row");
+        return row;
+    }
+
+    private void configureCardState(VBox card, Node detail, StudySessionItem item, int index) {
         boolean completed = progress.isCompleted(item.id());
         if (completed) {
             card.getStyleClass().add("completed");
@@ -452,8 +568,9 @@ public final class StudyPlannerApp extends Application {
             card.getStyleClass().add("active");
         }
         if (detail != null) {
-            detail.setVisible(!completed);
-            detail.setManaged(!completed);
+            boolean expanded = !completed && isActive(index);
+            detail.setVisible(expanded);
+            detail.setManaged(expanded);
             card.setOnMouseClicked(event -> {
                 if (!(event.getTarget() instanceof CheckBox)) {
                     boolean visible = !detail.isVisible();
@@ -464,6 +581,10 @@ public final class StudyPlannerApp extends Application {
         }
         card.setMaxWidth(Double.MAX_VALUE);
         VBox.setVgrow(card, Priority.NEVER);
+    }
+
+    private void progressRingArc(double ratio) {
+        progressArc.setLength(-360 * Math.max(0, Math.min(1, ratio)));
     }
 
     private boolean isActive(int index) {
@@ -599,7 +720,7 @@ public final class StudyPlannerApp extends Application {
                 .replace("\"", "\\\\\"");
     }
 
-    private void applyMatugenPalette(BorderPane root) {
+    private void applyMatugenPalette(Pane root) {
         Path palette = Path.of(System.getenv().getOrDefault(
                 "LIVARA_THEME_ROOT", System.getProperty("user.home") + "/.local/state/livara/theme")
         ).resolve("palette.dark.json");
@@ -641,7 +762,7 @@ public final class StudyPlannerApp extends Application {
         int studyOrder = 1;
         for (DayOfWeek day : DayOfWeek.values()) {
             for (StudyBlock block : schedule.blocks(day)) {
-                items.add(StudySessionItem.study(studyOrder, block.focus(), block.topic(),
+                items.add(StudySessionItem.study(studyOrder, block.focus(), displayTopic(block, studyOrder),
                         (int) block.duration().toMinutes()));
                 if (block.breakAfterMinutes() > 0) {
                     items.add(StudySessionItem.breakItem(studyOrder, block.breakAfterMinutes()));
@@ -650,6 +771,14 @@ public final class StudyPlannerApp extends Application {
             }
         }
         return List.copyOf(items);
+    }
+
+    private static String displayTopic(StudyBlock block, int order) {
+        String topic = block.topic();
+        if (topic != null && !topic.matches(".*[ãáâéêíóôõúçÃÁÂÉÊÍÓÔÕÚÇ].*")) {
+            return topic;
+        }
+        return block.focus().label() + " · Focus block " + String.format("%02d", order);
     }
 
     private static Path defaultPath() {

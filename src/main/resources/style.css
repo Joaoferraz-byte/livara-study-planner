@@ -13,6 +13,8 @@
     -fx-livara-faint: derive(-fx-text-base-color, -50%);
     -fx-livara-accent-soft: derive(-fx-base, 22%);
     -fx-livara-accent-strong: derive(-fx-accent, -12%);
+    -fx-livara-success: #8ee6b0;
+    -fx-livara-secondary: #c3adff;
     -fx-background-color: -fx-livara-background;
     -fx-font-family: "Inter", "Noto Sans", sans-serif;
     -fx-font-size: 13px;
@@ -21,6 +23,54 @@
 
 .dashboard-shell {
     -fx-background-color: transparent;
+}
+
+.ambient-layer {
+    -fx-background-color: transparent;
+}
+
+.ambient-halo {
+    -fx-fill: -fx-livara-accent-soft;
+    -fx-opacity: 0.3;
+}
+
+.ambient-orbit {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-border-strong;
+    -fx-stroke-width: 1px;
+    -fx-opacity: 0.35;
+}
+
+.hero-copy {
+    -fx-background-color: transparent;
+}
+
+.progress-ring {
+    -fx-background-color: -fx-livara-surface-raised;
+    -fx-background-radius: 999px;
+    -fx-border-color: -fx-livara-border-strong;
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+    -fx-padding: 6px;
+}
+
+.progress-ring-track {
+    -fx-fill: -fx-livara-background;
+    -fx-stroke: -fx-livara-border;
+    -fx-stroke-width: 6px;
+}
+
+.progress-ring-arc {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-accent;
+    -fx-stroke-width: 6px;
+    -fx-stroke-line-cap: ROUND;
+}
+
+.progress-ring-value {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-text;
 }
 
 .app-bar {
@@ -221,6 +271,16 @@
 
 .session-card.completed {
     -fx-opacity: 0.72;
+    -fx-border-color: -fx-livara-success;
+}
+
+.session-card.completed .item-check .box {
+    -fx-background-color: -fx-livara-success;
+    -fx-border-color: -fx-livara-success;
+}
+
+.session-card.completed .item-check .mark {
+    -fx-background-color: -fx-livara-background;
 }
 
 .session-card.completed .item-title,
@@ -245,10 +305,10 @@
 
 .item-check .box {
     -fx-background-color: transparent;
-    -fx-background-radius: 5px;
-    -fx-border-color: -fx-livara-faint;
-    -fx-border-radius: 5px;
+    -fx-background-radius: 999px;
+    -fx-border-color: -fx-livara-accent;
     -fx-border-width: 1px;
+    -fx-border-radius: 999px;
     -fx-padding: 2px;
 }
 
@@ -296,7 +356,67 @@
 .item-detail {
     -fx-border-color: -fx-livara-border transparent transparent transparent;
     -fx-border-width: 1px 0 0 0;
-    -fx-padding: 9px 0 0 64px;
+    -fx-padding: 10px 0 0 30px;
+}
+
+.detail-chips {
+    -fx-background-color: transparent;
+}
+
+.detail-chip {
+    -fx-background-color: -fx-livara-surface-highlight;
+    -fx-background-radius: 999px;
+    -fx-border-color: -fx-livara-border-strong;
+    -fx-border-radius: 999px;
+    -fx-padding: 5px 8px;
+    -fx-font-family: "Monospace";
+    -fx-font-size: 10px;
+    -fx-text-fill: -fx-livara-muted;
+}
+
+.detail-chip-secondary {
+    -fx-border-color: -fx-livara-secondary;
+    -fx-text-fill: -fx-livara-secondary;
+}
+
+.strategy-callout {
+    -fx-background-color: -fx-livara-accent-soft;
+    -fx-background-radius: 9px;
+    -fx-border-color: -fx-livara-border-strong;
+    -fx-border-radius: 9px;
+    -fx-padding: 8px 10px;
+    -fx-font-family: "Monospace";
+    -fx-font-size: 10px;
+    -fx-text-fill: -fx-livara-accent;
+}
+
+.task-list {
+    -fx-background-color: transparent;
+}
+
+.task-row {
+    -fx-border-color: -fx-livara-border transparent transparent transparent;
+    -fx-border-width: 1px 0 0 0;
+    -fx-padding: 9px 0 8px 0;
+}
+
+.task-number {
+    -fx-font-family: "Monospace";
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-accent;
+}
+
+.task-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-text;
+}
+
+.task-text {
+    -fx-font-size: 10px;
+    -fx-line-spacing: 1px;
+    -fx-text-fill: -fx-livara-muted;
 }
 
 .duration-chip {
@@ -333,6 +453,25 @@
     -fx-font-size: 22px;
     -fx-font-weight: bold;
     -fx-text-fill: -fx-livara-text;
+}
+
+.summary-row {
+    -fx-border-color: -fx-livara-border transparent transparent transparent;
+    -fx-border-width: 1px 0 0 0;
+    -fx-padding: 9px 0 0 0;
+}
+
+.summary-row-label {
+    -fx-font-family: "Monospace";
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-faint;
+}
+
+.summary-row-value {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-accent;
 }
 
 .progress-bar {
