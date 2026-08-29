@@ -36,7 +36,7 @@ public final class ScheduleService {
 
     public ScheduleTemplate advanceCycle(ScheduleTemplate template) {
         requireValid(template);
-        return DefaultScheduleFactory.create(template.cycle().next());
+        return DefaultScheduleFactory.create(template.cycle().next(), template.workflowTemplate());
     }
 
     private void requireValid(ScheduleTemplate template) {

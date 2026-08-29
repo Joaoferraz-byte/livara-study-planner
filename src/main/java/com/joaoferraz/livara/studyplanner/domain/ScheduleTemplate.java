@@ -12,11 +12,20 @@ public final class ScheduleTemplate {
     private final int schemaVersion;
     private final String name;
     private final Cycle cycle;
+    private final WorkflowTemplate workflowTemplate;
     private final int pauseMinutes;
     private final Map<DayOfWeek, List<StudyBlock>> blocksByDay;
 
+    /**
+     * Backwards-compatible constructor for callers and schema-v1 documents.
+     */
     public ScheduleTemplate(int schemaVersion, String name, Cycle cycle, int pauseMinutes,
                             Map<DayOfWeek, List<StudyBlock>> blocksByDay) {
+        this(schemaVersion, name, cycle, WorkflowTemplate.MARKET_PROGRAMMING, pauseMinutes, blocksByDay);
+    }
+
+    public ScheduleTemplate(int schemaVersion, String name, Cycle cycle, WorkflowTemplate workflowTemplate,
+                            int pauseMinutes, Map<DayOfWeek, List<StudyBlock>> blocksByDay) {
         if (schemaVersion < 1) {
             throw new IllegalArgumentException("Schema version must be positive");
         }
@@ -26,6 +35,7 @@ public final class ScheduleTemplate {
             throw new IllegalArgumentException("Template name cannot be blank");
         }
         this.cycle = Objects.requireNonNull(cycle, "cycle");
+        this.workflowTemplate = Objects.requireNonNull(workflowTemplate, "workflowTemplate");
         if (pauseMinutes < 0) {
             throw new IllegalArgumentException("Pause duration cannot be negative");
         }
@@ -51,6 +61,10 @@ public final class ScheduleTemplate {
         return cycle;
     }
 
+    public WorkflowTemplate workflowTemplate() {
+        return workflowTemplate;
+    }
+
     public int pauseMinutes() {
         return pauseMinutes;
     }
@@ -68,6 +82,11 @@ public final class ScheduleTemplate {
     }
 
     public ScheduleTemplate withCycle(Cycle newCycle) {
-        return new ScheduleTemplate(schemaVersion, name, newCycle, pauseMinutes, blocksByDay);
+        return new ScheduleTemplate(schemaVersion, name, newCycle, workflowTemplate, pauseMinutes, blocksByDay);
+    }
+
+    public ScheduleTemplate withWorkflowTemplate(WorkflowTemplate newWorkflowTemplate) {
+        return new ScheduleTemplate(schemaVersion, newWorkflowTemplate.label(), cycle, newWorkflowTemplate,
+                pauseMinutes, blocksByDay);
     }
 }

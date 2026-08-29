@@ -4,6 +4,7 @@ import com.joaoferraz.livara.studyplanner.domain.Cycle;
 import com.joaoferraz.livara.studyplanner.domain.FocusArea;
 import com.joaoferraz.livara.studyplanner.domain.ScheduleTemplate;
 import com.joaoferraz.livara.studyplanner.domain.StudyBlock;
+import com.joaoferraz.livara.studyplanner.domain.WorkflowTemplate;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -29,6 +30,9 @@ public final class ScheduleStore {
         int schemaVersion = integer(root, "schemaVersion");
         String name = string(root, "name");
         Cycle cycle = Cycle.valueOf(string(root, "cycle"));
+        WorkflowTemplate workflowTemplate = root.get("workflowTemplate") instanceof String value
+                ? WorkflowTemplate.fromId(value)
+                : WorkflowTemplate.MARKET_PROGRAMMING;
         int pauseMinutes = integer(root, "pauseMinutes");
         Object daysValue = root.get("days");
         if (!(daysValue instanceof Map<?, ?> dayMap)) {
@@ -54,7 +58,7 @@ public final class ScheduleStore {
             }
             days.put(day, List.copyOf(blocks));
         }
-        return new ScheduleTemplate(schemaVersion, name, cycle, pauseMinutes, days);
+        return new ScheduleTemplate(schemaVersion, name, cycle, workflowTemplate, pauseMinutes, days);
     }
 
     public void save(Path path, ScheduleTemplate template) throws IOException {
@@ -76,6 +80,7 @@ public final class ScheduleStore {
         field(json, "schemaVersion", Integer.toString(template.schemaVersion()), false);
         field(json, "name", quote(template.name()), true);
         field(json, "cycle", quote(template.cycle().name()), true);
+        field(json, "workflowTemplate", quote(template.workflowTemplate().id()), true);
         field(json, "pauseMinutes", Integer.toString(template.pauseMinutes()), false);
         json.append("  \"days\": {\n");
         DayOfWeek[] days = DayOfWeek.values();
