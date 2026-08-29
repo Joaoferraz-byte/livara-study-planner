@@ -31,8 +31,11 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
     runHook preInstall
     mkdir -p "$out/share/${finalAttrs.pname}" "$out/bin"
     cp -r "build/install/${finalAttrs.pname}/." "$out/share/${finalAttrs.pname}/"
-    makeWrapper "${pkgs.jdk21}/bin/java" "$out/bin/${finalAttrs.pname}" \
-      --add-flags "-cp $out/share/${finalAttrs.pname}/lib/* com.joaoferraz.livara.studyplanner.cli.Main"
+    cat > "$out/bin/${finalAttrs.pname}" <<EOF
+#!${pkgs.runtimeShell}
+exec ${pkgs.jdk21}/bin/java -cp "$out/share/${finalAttrs.pname}/lib/*" com.joaoferraz.livara.studyplanner.cli.Main "\$@"
+EOF
+    chmod +x "$out/bin/${finalAttrs.pname}"
     runHook postInstall
   '';
 
