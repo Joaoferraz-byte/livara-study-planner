@@ -26,6 +26,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.util.StringConverter;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -57,6 +58,8 @@ public final class StudyPlannerApp extends Application {
     private final TableView<ScheduleRow> table = new TableView<>(rows);
     private final Label cycleLabel = new Label();
     private final Label statusLabel = new Label();
+    private final ComboBox<Cycle> templateSelector = new ComboBox<>();
+    private boolean updatingTemplateSelector;
     private ScheduleTemplate current;
     private Path schedulePath;
 
@@ -80,27 +83,46 @@ public final class StudyPlannerApp extends Application {
         applyMatugenPalette(root);
         root.setPadding(new Insets(22));
 
+        templateSelector.setItems(FXCollections.observableArrayList(Cycle.values()));
+        templateSelector.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(Cycle cycle) {
+                return cycle == null ? "" : cycle.label() + " · " + cycle.subjects();
+            }
+
+            @Override
+            public Cycle fromString(String value) {
+                return templateSelector.getValue();
+            }
+        });
+        templateSelector.setPrefWidth(270);
+        templateSelector.setOnAction(event -> selectTemplate(templateSelector.getValue()));
+        Label templateLabel = new Label("󰃭 Template:");
+        templateLabel.getStyleClass().add("template-label");
+        HBox templatePicker = new HBox(8, templateLabel, templateSelector);
+        templatePicker.setAlignment(Pos.CENTER_LEFT);
+
         Label title = new Label("Livara Study Planner");
         title.getStyleClass().add("title");
         Label subtitle = new Label("Cronograma reutilizável · blocos de 60 min · pausas de 15 min");
         subtitle.getStyleClass().add("subtitle");
         cycleLabel.getStyleClass().add("cycle");
-        VBox heading = new VBox(5, title, subtitle, cycleLabel);
+        VBox heading = new VBox(5, title, subtitle, cycleLabel, templatePicker);
         heading.setPadding(new Insets(0, 0, 15, 0));
 
         configureTable();
         reloadRows();
 
-        Button add = new Button("Adicionar bloco");
+        Button add = new Button("󰐕 Adicionar bloco");
         add.setOnAction(event -> addBlock());
-        Button remove = new Button("Remover selecionado");
+        Button remove = new Button("󰆴 Remover selecionado");
         remove.setOnAction(event -> removeSelected());
-        Button validate = new Button("Validar");
+        Button validate = new Button("󰄬 Validar");
         validate.setOnAction(event -> validateCurrent());
-        Button save = new Button("Salvar");
+        Button save = new Button("󰆓 Salvar");
         save.getStyleClass().add("primary-button");
         save.setOnAction(event -> saveCurrent());
-        Button next = new Button("Avançar ciclo A/B");
+        Button next = new Button("󰒓 Avançar ciclo A/B");
         next.setOnAction(event -> advanceCycle());
         HBox actions = new HBox(8, add, remove, validate, save, next);
         actions.setAlignment(Pos.CENTER_LEFT);
@@ -166,6 +188,9 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void reloadRows() {
+        updatingTemplateSelector = true;
+        templateSelector.setValue(current.cycle());
+        updatingTemplateSelector = false;
         rows.clear();
         for (DayOfWeek day : DayOfWeek.values()) {
             for (StudyBlock block : current.blocks(day)) {
@@ -174,6 +199,15 @@ public final class StudyPlannerApp extends Application {
         }
         cycleLabel.setText(current.cycle().label() + " · " + current.cycle().subjects() + " · " + current.totalBlocks() + " blocos");
         statusLabel.setText("Arquivo: " + schedulePath + " · alterações são salvas explicitamente");
+    }
+
+    private void selectTemplate(Cycle cycle) {
+        if (updatingTemplateSelector || cycle == null || current.cycle() == cycle) {
+            return;
+        }
+        current = DefaultScheduleFactory.create(cycle);
+        reloadRows();
+        statusLabel.setText("Template " + cycle.label() + " carregado; alterações anteriores não foram salvas.");
     }
 
     private ScheduleTemplate buildTemplateFromRows() {
@@ -282,8 +316,7 @@ public final class StudyPlannerApp extends Application {
         String base = paletteColor(palette, "base", "#17181d");
         String text = paletteColor(palette, "text", "#e5e1e9");
         String primary = paletteColor(palette, "primary", "#b8c8ff");
-        String surface = paletteColor(palette, "surface0", "#24252c");
-        root.setStyle("-fx-base: " + base + "; -fx-accent: " + primary + "; -fx-focus-color: " + primary + "; -fx-faint-focus-color: transparent; -fx-text-base-color: " + text + "; -planner-surface: " + surface + ";");
+        root.setStyle("-fx-base: " + base + "; -fx-accent: " + primary + "; -fx-focus-color: " + primary + "; -fx-faint-focus-color: transparent; -fx-text-base-color: " + text + ";");
     }
 
     private String paletteColor(Path path, String key, String fallback) {
