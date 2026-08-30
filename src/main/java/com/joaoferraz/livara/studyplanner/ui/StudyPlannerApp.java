@@ -55,6 +55,7 @@ import javafx.scene.shape.SVGPath;
 import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Popup;
+import javafx.stage.PopupWindow;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 import javafx.util.Duration;
@@ -875,11 +876,49 @@ public final class StudyPlannerApp extends Application {
         if (popup.getScene() == null) {
             return;
         }
-        popup.getScene().setFill(Color.TRANSPARENT);
+        Scene scene = popup.getScene();
+        scene.setFill(Color.TRANSPARENT);
+        Node root = scene.getRoot();
+        if (!root.getStyleClass().contains("root")) {
+            root.getStyleClass().add("root");
+        }
+        if (!root.getStyleClass().contains("popup")) {
+            root.getStyleClass().add("popup");
+        }
+        applyMatugenPalette(root);
         String stylesheet = Objects.requireNonNull(getClass().getResource("/style.css"),
                 "style.css resource is missing").toExternalForm();
-        if (!popup.getScene().getStylesheets().contains(stylesheet)) {
-            popup.getScene().getStylesheets().add(stylesheet);
+        if (!scene.getStylesheets().contains(stylesheet)) {
+            scene.getStylesheets().add(stylesheet);
+        }
+        // ComboBox/Spinner skins create child PopupWindows after the editor
+        // scene is shown. Reapply the same palette after that child window is
+        // materialized, otherwise JavaFX falls back to its default white root.
+        scene.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED,
+                event -> Platform.runLater(() -> styleOwnedPopupWindows(scene.getWindow(), stylesheet)));
+        Platform.runLater(() -> styleOwnedPopupWindows(scene.getWindow(), stylesheet));
+    }
+
+    private void styleOwnedPopupWindows(Window owner, String stylesheet) {
+        for (Window window : Window.getWindows()) {
+            if (!(window instanceof PopupWindow popupWindow)
+                    || popupWindow.getOwnerWindow() != owner
+                    || popupWindow.getScene() == null) {
+                continue;
+            }
+            Scene scene = popupWindow.getScene();
+            scene.setFill(Color.TRANSPARENT);
+            Node root = scene.getRoot();
+            if (!root.getStyleClass().contains("root")) {
+                root.getStyleClass().add("root");
+            }
+            if (!root.getStyleClass().contains("popup")) {
+                root.getStyleClass().add("popup");
+            }
+            applyMatugenPalette(root);
+            if (!scene.getStylesheets().contains(stylesheet)) {
+                scene.getStylesheets().add(stylesheet);
+            }
         }
     }
 
@@ -960,7 +999,7 @@ public final class StudyPlannerApp extends Application {
             popup.hide();
         });
         popup.setOnShown(event -> {
-            if (popup.getScene() != null) popup.getScene().setFill(Color.TRANSPARENT);
+            stylePopupScene(popup);
             javafx.geometry.Point2D point = row.row.localToScreen(
                     Math.max(18, row.row.getLayoutBounds().getWidth() / 2 - 165), 26);
             popup.setX(point.getX());
@@ -996,7 +1035,7 @@ public final class StudyPlannerApp extends Application {
             popup.hide();
         });
         popup.setOnShown(event -> {
-            if (popup.getScene() != null) popup.getScene().setFill(Color.TRANSPARENT);
+            stylePopupScene(popup);
             javafx.geometry.Point2D point = add.localToScreen(0, add.getLayoutBounds().getHeight() + 8);
             popup.setX(point.getX());
             popup.setY(point.getY());
@@ -1657,7 +1696,7 @@ public final class StudyPlannerApp extends Application {
                 .replace("\"", "\\\\\"");
     }
 
-    private void applyMatugenPalette(Pane root) {
+    private void applyMatugenPalette(Node root) {
         Path palette = Path.of(System.getenv().getOrDefault(
                 "LIVARA_THEME_ROOT", System.getProperty("user.home") + "/.local/state/livara/theme")
         ).resolve("palette.dark.json");

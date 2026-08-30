@@ -782,8 +782,12 @@
     -fx-text-fill: -fx-livara-text;
 }
 
-.combo-box-popup .list-view {
+.root.popup .combo-box-popup,
+.root.popup .combo-box-popup .list-view {
+    -fx-background-color: -fx-livara-surface-raised;
+    -fx-background-insets: 0;
     -fx-border-color: -fx-livara-border-strong;
+    -fx-border-insets: 0;
     -fx-border-radius: 8px;
     -fx-background-radius: 8px;
 }
@@ -1057,12 +1061,21 @@
 }
 
 /* Contextual editor popups: transparent window root, themed panel, no legacy white corners. */
+.root.popup,
 .popup-root {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
-    -fx-background-radius: 14px;
     -fx-border-color: transparent;
     -fx-border-insets: 0;
+    -fx-padding: 0;
+}
+.popup-root {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
     -fx-padding: 0;
 }
 .editor-popup {
