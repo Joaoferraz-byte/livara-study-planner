@@ -357,18 +357,22 @@
 
 .check-outer {
     -fx-fill: transparent;
-    -fx-stroke: -fx-livara-accent;
+    -fx-stroke: -fx-livara-border-strong;
     -fx-stroke-width: 1px;
 }
 
 .check-subcircle {
     -fx-fill: transparent;
-    -fx-stroke: -fx-livara-secondary;
+    -fx-stroke: -fx-livara-muted;
     -fx-stroke-width: 1.5px;
 }
 
 .check-core {
     -fx-fill: -fx-livara-background;
+}
+
+.item-check .check-subcircle {
+    -fx-stroke: -fx-livara-muted;
 }
 
 .item-check:selected .check-subcircle {
@@ -489,12 +493,12 @@
 }
 
 .task-check .check-outer {
-    -fx-stroke: -fx-livara-secondary;
+    -fx-stroke: -fx-livara-border-strong;
     -fx-stroke-width: 1px;
 }
 
 .task-check .check-subcircle {
-    -fx-stroke: -fx-livara-accent;
+    -fx-stroke: -fx-livara-faint;
     -fx-stroke-width: 1.2px;
 }
 
@@ -510,7 +514,7 @@
     -fx-padding: 0;
 }
 .task-check:hover .check-subcircle {
-    -fx-fill: -fx-livara-accent-soft;
+    -fx-fill: -fx-livara-surface-highlight;
 }
 
 .task-number {
