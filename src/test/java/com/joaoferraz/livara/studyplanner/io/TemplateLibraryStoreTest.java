@@ -40,6 +40,51 @@ class TemplateLibraryStoreTest {
     }
 
     @Test
+    void migratesTheLegacyDefaultScheduleToIncludeCycleB() throws Exception {
+        String legacy = """
+                {
+                  "schemaVersion": 1,
+                  "name": "Market Programming",
+                  "cycle": "A",
+                  "pauseMinutes": 15,
+                  "days": {
+                    "MONDAY": [
+                      {
+                        "order": 1,
+                        "focus": "market-programming",
+                        "topic": "Legacy focus",
+                        "durationMinutes": 60,
+                        "breakAfterMinutes": 15
+                      }
+                    ]
+                  }
+                }
+                """;
+        TemplateLibrary loaded = new TemplateLibraryStore().fromJson(legacy);
+
+        assertEquals(List.of(Cycle.A, Cycle.B), loaded.selected().createdCycles());
+        assertEquals("Legacy focus", loaded.selected().blocks(Cycle.A)
+                .get(java.time.DayOfWeek.MONDAY).getFirst().topic());
+        assertTrue(loaded.selected().totalBlocks(Cycle.B) > 0);
+    }
+
+    @Test
+    void keepsLegacyCustomSingleCycleSchedulesUnchanged() throws Exception {
+        String legacy = """
+                {
+                  "schemaVersion": 1,
+                  "name": "Personal one-cycle plan",
+                  "cycle": "A",
+                  "pauseMinutes": 15,
+                  "days": {}
+                }
+                """;
+        TemplateLibrary loaded = new TemplateLibraryStore().fromJson(legacy);
+
+        assertEquals(List.of(Cycle.A), loaded.selected().createdCycles());
+    }
+
+    @Test
     void wrapsLegacySingleScheduleDocumentsWithoutChangingTheirData() throws Exception {
         ScheduleStore scheduleStore = new ScheduleStore();
         ScheduleTemplate original = DefaultScheduleFactory.create(Cycle.B)

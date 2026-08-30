@@ -1,5 +1,7 @@
 package com.joaoferraz.livara.studyplanner.io;
 
+import com.joaoferraz.livara.studyplanner.domain.Cycle;
+import com.joaoferraz.livara.studyplanner.domain.DefaultScheduleFactory;
 import com.joaoferraz.livara.studyplanner.domain.ScheduleTemplate;
 import com.joaoferraz.livara.studyplanner.domain.TemplateLibrary;
 
@@ -26,7 +28,7 @@ public final class TemplateLibraryStore {
             throw new IOException("Template library document root must be a JSON object");
         }
         if (!(root.get("templates") instanceof List<?>)) {
-            return TemplateLibrary.single("default", scheduleStore.fromJson(json));
+            return TemplateLibrary.single("default", migrateLegacyDefault(scheduleStore.fromJson(json)));
         }
         return fromRoot(root);
     }
@@ -38,9 +40,25 @@ public final class TemplateLibraryStore {
             throw new IOException("Template library document root must be a JSON object");
         }
         if (!(root.get("templates") instanceof List<?>)) {
-            return TemplateLibrary.single("default", scheduleStore.fromJson(json));
+            return TemplateLibrary.single("default", migrateLegacyDefault(scheduleStore.fromJson(json)));
         }
         return fromRoot(root);
+    }
+
+    /**
+     * The first multi-cycle release can read the former single-schedule format,
+     * but that format had no way to persist cycle B. Only the seeded default
+     * template is enriched here; custom templates remain exactly as authored.
+     */
+    private ScheduleTemplate migrateLegacyDefault(ScheduleTemplate schedule) {
+        if (schedule.schemaVersion() < 2
+                && schedule.cycle() == Cycle.A
+                && schedule.name().equalsIgnoreCase(schedule.workflowTemplate().label())
+                && !schedule.hasCycle(Cycle.B)) {
+            return schedule.withAddedCycle(Cycle.B,
+                    DefaultScheduleFactory.create(Cycle.B, schedule.workflowTemplate()).blocks(Cycle.B));
+        }
+        return schedule;
     }
 
     private TemplateLibrary fromRoot(Map<?, ?> root) throws IOException {
