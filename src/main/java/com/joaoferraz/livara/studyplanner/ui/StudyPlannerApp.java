@@ -1194,12 +1194,18 @@ public final class StudyPlannerApp extends Application {
         create.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
         create.setAccessibleText("Create new template");
         create.setTooltip(new Tooltip("Create new template"));
-        create.setMinSize(72, 72);
-        create.setPrefSize(72, 72);
-        create.setMaxSize(72, 72);
+        create.setMinSize(58, 58);
+        create.setPrefSize(58, 58);
+        create.setMaxSize(58, 58);
         create.getStyleClass().add("create-template-button");
         create.setOnAction(event -> onSelected.run());
-        library.getChildren().add(create);
+        StackPane slot = new StackPane(create);
+        slot.setMinSize(88, 112);
+        slot.setPrefSize(88, 112);
+        slot.setMaxSize(88, 112);
+        slot.setAlignment(Pos.CENTER);
+        slot.getStyleClass().add("create-template-slot");
+        library.getChildren().add(slot);
     }
 
     private void addTemplateCard(FlowPane library, List<VBox> cards, String name, String description,

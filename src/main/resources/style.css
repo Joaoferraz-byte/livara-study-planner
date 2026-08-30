@@ -1063,15 +1063,23 @@
     -fx-font-size: 9px;
     -fx-text-fill: -fx-livara-muted;
 }
-.create-template-button {
+.create-template-slot {
     -fx-background-color: transparent;
-    -fx-border-color: transparent;
+    -fx-padding: 0 5px;
+}
+.create-template-button {
+    -fx-background-color: -fx-livara-surface;
+    -fx-background-radius: 12px;
+    -fx-border-color: -fx-livara-border;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
     -fx-padding: 0;
     -fx-cursor: hand;
 }
-.create-template-button:hover .create-template-icon,
-.create-template-button:focused .create-template-icon {
-    -fx-stroke: -fx-livara-text;
+.create-template-button:hover,
+.create-template-button:focused {
+    -fx-background-color: -fx-livara-surface-hover;
+    -fx-border-color: -fx-livara-border-strong;
 }
 .create-template-icon {
     -fx-fill: transparent;
@@ -1079,8 +1087,8 @@
     -fx-stroke-width: 2.25px;
     -fx-stroke-line-cap: round;
     -fx-stroke-line-join: round;
-    -fx-scale-x: 1.1;
-    -fx-scale-y: 1.1;
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
 }
 
 /* Contextual editor modals: one scene-graph host, no native Popup rectangle. */
