@@ -91,7 +91,9 @@ public final class StudyPlannerApp extends Application {
     private static final List<String> VAULT_FOLDERS = List.of(
             "Black Box", "Source Notes", "Projects", "Daily Notes", "Xournal++", "References");
     private static final List<String> TEMPLATE_ICON_IDS = List.of(
-            "x", "layout-dashboard", "calendar", "notebook", "book-2", "bookmark", "folder", "palette", "archive");
+            "layout-dashboard", "calendar", "notebook", "book-2", "bookmark", "folder", "palette", "archive",
+            "star", "heart", "target", "bulb", "code", "flask", "atom", "brain", "trophy", "bolt",
+            "clock", "check", "list-details", "school", "device-desktop", "world", "chart-dots", "compass", "rocket");
 
     private static Path requestedPath;
 
@@ -1076,11 +1078,16 @@ public final class StudyPlannerApp extends Application {
         VBox panel = new VBox(16);
         Button currentIcon = iconButton(icon.getValue());
         FlowPane iconGrid = iconPicker(icon, currentIcon);
-        iconGrid.setVisible(false);
-        iconGrid.setManaged(false);
+        ScrollPane iconScroll = new ScrollPane(iconGrid);
+        iconScroll.setFitToWidth(true);
+        iconScroll.setPrefViewportHeight(250);
+        iconScroll.setMaxHeight(250);
+        iconScroll.getStyleClass().add("icon-picker-scroll");
+        iconScroll.setVisible(false);
+        iconScroll.setManaged(false);
         currentIcon.setOnAction(event -> {
-            iconGrid.setManaged(!iconGrid.isManaged());
-            iconGrid.setVisible(iconGrid.isManaged());
+            iconScroll.setManaged(!iconScroll.isManaged());
+            iconScroll.setVisible(iconScroll.isManaged());
         });
         TextField nameCopy = new TextField(name.getText());
         nameCopy.setPromptText("Template name");
@@ -1100,8 +1107,8 @@ public final class StudyPlannerApp extends Application {
         HBox actions = new HBox(10, cancel, apply);
         actions.setAlignment(Pos.CENTER_RIGHT);
         panel.getChildren().setAll(new Region(), new Label("Name"), nameCopy,
-                new Label("Workflow"), workflowCopy, new Label("Pause minutes"), pauseCopy,
-                new Label("Icon"), currentIcon, iconGrid, actions);
+                new Label("Workflow"), workflowCopy,                 new Label("Pause minutes"), pauseCopy,
+                new Label("Icon"), currentIcon, iconScroll, actions);
         modal[0] = showModal(panel);
         panel.getChildren().set(0, modalHeader("Edit template identity", modal));
         Platform.runLater(nameCopy::deselect);

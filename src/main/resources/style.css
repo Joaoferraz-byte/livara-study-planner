@@ -1080,21 +1080,31 @@
     -fx-border-insets: 0;
     -fx-border-radius: 18px;
     -fx-border-width: 1px;
-    -fx-padding: 26px;
-    -fx-min-width: 520px;
-    -fx-pref-width: 560px;
-    -fx-max-width: 680px;
-    -fx-min-height: 360px;
+    -fx-padding: 32px;
+    -fx-min-width: 620px;
+    -fx-pref-width: 700px;
+    -fx-max-width: 820px;
+    -fx-min-height: 500px;
+    -fx-font-size: 15px;
 }
 .modal-header {
-    -fx-padding: 0 0 8px 0;
+    -fx-padding: 0 0 14px 0;
+}
+.editor-modal > .label {
+    -fx-font-size: 14px;
+    -fx-text-fill: -fx-livara-muted;
+}
+.editor-modal .popup-title {
+    -fx-font-size: 21px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-text;
 }
 .modal-close-button {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
-    -fx-padding: 5px;
-    -fx-min-width: 32px;
-    -fx-min-height: 32px;
+    -fx-padding: 8px;
+    -fx-min-width: 44px;
+    -fx-min-height: 44px;
 }
 .modal-close-button:hover,
 .modal-close-button:focused {
@@ -1108,6 +1118,17 @@
 }
 .modal-close-button:hover .tabler-icon {
     -fx-stroke: -fx-livara-text;
+}
+.icon-picker-scroll,
+.icon-picker-scroll .viewport,
+.icon-picker-scroll .content {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+.icon-picker-scroll {
+    -fx-border-color: transparent;
+    -fx-max-height: 250px;
 }
 .icon-picker-grid {
     -fx-background-color: -fx-livara-surface;
@@ -1126,8 +1147,11 @@
     -fx-padding: 8px;
 }
 .icon-choice {
-    -fx-min-width: 104px;
-    -fx-pref-width: 112px;
+    -fx-min-width: 132px;
+    -fx-pref-width: 148px;
+    -fx-min-height: 58px;
+    -fx-pref-height: 58px;
+    -fx-font-size: 13px;
 }
 .icon-choice:hover,
 .icon-choice:focused {
@@ -1145,7 +1169,24 @@
 }
 .icon-choice-current {
     -fx-alignment: CENTER_LEFT;
-    -fx-min-height: 44px;
+    -fx-min-height: 58px;
+    -fx-pref-height: 58px;
+}
+.editor-modal .text-field,
+.editor-modal .combo-box,
+.editor-modal .button {
+    -fx-min-height: 48px;
+    -fx-pref-height: 48px;
+    -fx-font-size: 14px;
+}
+.editor-modal .combo-box,
+.editor-modal .text-field {
+    -fx-padding: 10px 14px;
+}
+.editor-modal .primary-button,
+.editor-modal .secondary-button {
+    -fx-padding: 12px 20px;
+    -fx-min-width: 132px;
 }
 
 /* Legacy popup selectors remain only for ComboBox skin windows, not editor modals. */
