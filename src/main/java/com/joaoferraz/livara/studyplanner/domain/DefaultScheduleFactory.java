@@ -23,8 +23,25 @@ public final class DefaultScheduleFactory {
         return ScheduleTemplate.withCycles(2, workflowTemplate.label(), cycle, workflowTemplate, 15, cycles);
     }
 
+    /**
+     * Creates the first editable state of a user-created template. It is
+     * intentionally valid but does not clone the seeded demonstration
+     * sequence, so the editor visibly belongs to the newly selected template.
+     */
+    public static ScheduleTemplate createDraft(Cycle cycle) {
+        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
+        for (Cycle value : Cycle.values()) {
+            cycles.put(value, project(value, draftSequence(value)));
+        }
+        return ScheduleTemplate.withCycles(2, "New study template", cycle,
+                WorkflowTemplate.MARKET_PROGRAMMING, 15, cycles);
+    }
+
     private static Map<DayOfWeek, List<StudyBlock>> project(Cycle cycle, WorkflowTemplate workflowTemplate) {
-        List<StudyBlock> sequence = sequence(cycle, workflowTemplate);
+        return project(cycle, sequence(cycle, workflowTemplate));
+    }
+
+    private static Map<DayOfWeek, List<StudyBlock>> project(Cycle cycle, List<StudyBlock> sequence) {
         DayOfWeek[] activeDays = {
                 DayOfWeek.MONDAY,
                 DayOfWeek.MONDAY,
@@ -51,6 +68,20 @@ public final class DefaultScheduleFactory {
             result.put(day, List.copyOf(grouped.get(day)));
         }
         return result;
+    }
+
+    private static List<StudyBlock> draftSequence(Cycle cycle) {
+        FocusArea firstSchool = cycle == Cycle.A ? FocusArea.PHYSICS : FocusArea.CHEMISTRY;
+        FocusArea secondSchool = cycle == Cycle.A ? FocusArea.BIOLOGY : FocusArea.MATHEMATICS;
+        return List.of(
+                new StudyBlock(1, FocusArea.REVIEW, "New study goal", Duration.ofHours(1), 15),
+                new StudyBlock(2, FocusArea.MARKET_PROGRAMMING, "New professional practice block", Duration.ofHours(1), 15),
+                new StudyBlock(3, FocusArea.PROJECTS, "New applied project block", Duration.ofHours(1), 15),
+                new StudyBlock(4, FocusArea.LOGIC, "New implementation block", Duration.ofHours(1), 15),
+                new StudyBlock(5, FocusArea.ARCHITECTURE, "New design block", Duration.ofHours(1), 15),
+                new StudyBlock(6, FocusArea.OPTIMIZATION, "New measurement block", Duration.ofHours(1), 15),
+                new StudyBlock(7, firstSchool, "New science block 1", Duration.ofHours(1), 15),
+                new StudyBlock(8, secondSchool, "New science block 2", Duration.ofHours(1), 15));
     }
 
     public static List<StudyBlock> sequence(Cycle cycle, WorkflowTemplate workflowTemplate) {

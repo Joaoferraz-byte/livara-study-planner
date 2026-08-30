@@ -1120,7 +1120,7 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void startNewTemplate() {
-        ScheduleTemplate draft = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING)
+        ScheduleTemplate draft = DefaultScheduleFactory.createDraft(Cycle.A)
                 .withIdentity("New study template", "x");
         library = library.add(draft);
         usingLegacyProgressPath = false;

@@ -36,6 +36,19 @@ class DefaultScheduleFactoryTest {
     }
 
     @Test
+    void newDraftIsValidButDoesNotCloneTheSeededTemplate() {
+        ScheduleTemplate seeded = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
+        ScheduleTemplate draft = DefaultScheduleFactory.createDraft(Cycle.A);
+
+        assertEquals(8, draft.totalBlocks());
+        assertTrue(ScheduleValidator.validate(draft).isEmpty());
+        assertTrue(draft.sequence().stream().allMatch(block -> block.topic().startsWith("New ")));
+        assertTrue(draft.sequence().stream().noneMatch(block ->
+                seeded.sequence().stream().map(StudyBlock::topic).toList().contains(block.topic())));
+        assertTrue(ScheduleValidator.validate(DefaultScheduleFactory.createDraft(Cycle.B)).isEmpty());
+    }
+
+    @Test
     void legacyConstructorDefaultsToMarketProgrammingWorkflow() {
         ScheduleTemplate schedule = DefaultScheduleFactory.create(Cycle.A);
 
