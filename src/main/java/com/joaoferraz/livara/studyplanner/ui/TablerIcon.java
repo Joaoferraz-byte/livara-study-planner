@@ -54,7 +54,7 @@ final class TablerIcon {
         return icon("settings");
     }
 
-    private static SVGPath icon(String name) {
+    static SVGPath icon(String name) {
         String resource = "/icons/tabler/" + name + ".svg";
         try (InputStream stream = TablerIcon.class.getResourceAsStream(resource)) {
             if (stream == null) {

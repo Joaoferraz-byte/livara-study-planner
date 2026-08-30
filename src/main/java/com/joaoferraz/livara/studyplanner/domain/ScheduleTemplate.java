@@ -14,18 +14,33 @@ public final class ScheduleTemplate {
     private final Cycle cycle;
     private final WorkflowTemplate workflowTemplate;
     private final int pauseMinutes;
-    private final Map<DayOfWeek, List<StudyBlock>> blocksByDay;
+    private final String iconId;
+    private final Map<Cycle, Map<DayOfWeek, List<StudyBlock>>> blocksByCycle;
 
-    /**
-     * Backwards-compatible constructor for callers and schema-v1 documents.
-     */
+    /** Backwards-compatible constructor for callers and schema-v1 documents. */
     public ScheduleTemplate(int schemaVersion, String name, Cycle cycle, int pauseMinutes,
                             Map<DayOfWeek, List<StudyBlock>> blocksByDay) {
         this(schemaVersion, name, cycle, WorkflowTemplate.MARKET_PROGRAMMING, pauseMinutes, blocksByDay);
     }
 
+    /** Backwards-compatible constructor for a template that contains its active cycle projection. */
     public ScheduleTemplate(int schemaVersion, String name, Cycle cycle, WorkflowTemplate workflowTemplate,
                             int pauseMinutes, Map<DayOfWeek, List<StudyBlock>> blocksByDay) {
+        this(schemaVersion, name, cycle, workflowTemplate, pauseMinutes, "layout-dashboard",
+                singleCycle(cycle, blocksByDay), true);
+    }
+
+    private static Map<Cycle, Map<DayOfWeek, List<StudyBlock>>> singleCycle(
+            Cycle cycle, Map<DayOfWeek, List<StudyBlock>> blocksByDay) {
+        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> result = new EnumMap<>(Cycle.class);
+        result.put(cycle, blocksByDay);
+        return result;
+    }
+
+    private ScheduleTemplate(int schemaVersion, String name, Cycle cycle, WorkflowTemplate workflowTemplate,
+                             int pauseMinutes, String iconId,
+                             Map<Cycle, Map<DayOfWeek, List<StudyBlock>>> blocksByCycle,
+                             boolean complete) {
         if (schemaVersion < 1) {
             throw new IllegalArgumentException("Schema version must be positive");
         }
@@ -40,53 +55,60 @@ public final class ScheduleTemplate {
             throw new IllegalArgumentException("Pause duration cannot be negative");
         }
         this.pauseMinutes = pauseMinutes;
-        Objects.requireNonNull(blocksByDay, "blocksByDay");
-        EnumMap<DayOfWeek, List<StudyBlock>> copy = new EnumMap<>(DayOfWeek.class);
-        for (DayOfWeek day : DayOfWeek.values()) {
-            List<StudyBlock> blocks = blocksByDay.getOrDefault(day, List.of());
-            copy.put(day, Collections.unmodifiableList(new ArrayList<>(blocks)));
+        this.iconId = Objects.requireNonNull(iconId, "iconId").trim();
+        if (this.iconId.isBlank()) {
+            throw new IllegalArgumentException("Template icon cannot be blank");
         }
-        this.blocksByDay = Collections.unmodifiableMap(copy);
+        Objects.requireNonNull(blocksByCycle, "blocksByCycle");
+        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> copy = new EnumMap<>(Cycle.class);
+        for (Cycle value : Cycle.values()) {
+            Map<DayOfWeek, List<StudyBlock>> source = blocksByCycle.getOrDefault(value, Map.of());
+            EnumMap<DayOfWeek, List<StudyBlock>> dayCopy = new EnumMap<>(DayOfWeek.class);
+            for (DayOfWeek day : DayOfWeek.values()) {
+                dayCopy.put(day, Collections.unmodifiableList(new ArrayList<>(source.getOrDefault(day, List.of()))));
+            }
+            copy.put(value, Collections.unmodifiableMap(dayCopy));
+        }
+        this.blocksByCycle = Collections.unmodifiableMap(copy);
     }
 
-    public int schemaVersion() {
-        return schemaVersion;
+    public static ScheduleTemplate withCycles(int schemaVersion, String name, Cycle activeCycle,
+                                              WorkflowTemplate workflowTemplate, int pauseMinutes,
+                                              Map<Cycle, Map<DayOfWeek, List<StudyBlock>>> blocksByCycle) {
+        return withCycles(schemaVersion, name, activeCycle, workflowTemplate, pauseMinutes,
+                "layout-dashboard", blocksByCycle);
     }
 
-    public String name() {
-        return name;
+    public static ScheduleTemplate withCycles(int schemaVersion, String name, Cycle activeCycle,
+                                              WorkflowTemplate workflowTemplate, int pauseMinutes, String iconId,
+                                              Map<Cycle, Map<DayOfWeek, List<StudyBlock>>> blocksByCycle) {
+        return new ScheduleTemplate(schemaVersion, name, activeCycle, workflowTemplate, pauseMinutes,
+                iconId, blocksByCycle, true);
     }
 
-    public Cycle cycle() {
-        return cycle;
-    }
+    public int schemaVersion() { return schemaVersion; }
+    public String name() { return name; }
+    public Cycle cycle() { return cycle; }
+    public WorkflowTemplate workflowTemplate() { return workflowTemplate; }
+    public int pauseMinutes() { return pauseMinutes; }
+    public String iconId() { return iconId; }
 
-    public WorkflowTemplate workflowTemplate() {
-        return workflowTemplate;
+    /** Returns the active cycle projection kept for existing callers. */
+    public Map<DayOfWeek, List<StudyBlock>> blocksByDay() { return blocks(cycle); }
+    public Map<DayOfWeek, List<StudyBlock>> blocks(Cycle value) { return blocksByCycle.get(value); }
+    public List<StudyBlock> blocks(DayOfWeek day) { return blocks(cycle, day); }
+    public List<StudyBlock> blocks(Cycle value, DayOfWeek day) {
+        return blocksByCycle.getOrDefault(value, Map.of()).getOrDefault(day, List.of());
     }
-
-    public int pauseMinutes() {
-        return pauseMinutes;
-    }
-
-    public Map<DayOfWeek, List<StudyBlock>> blocksByDay() {
-        return blocksByDay;
-    }
-
-    public List<StudyBlock> blocks(DayOfWeek day) {
-        return blocksByDay.getOrDefault(day, List.of());
-    }
-
-    public int totalBlocks() {
-        return blocksByDay.values().stream().mapToInt(List::size).sum();
-    }
+    public Map<Cycle, Map<DayOfWeek, List<StudyBlock>>> blocksByCycle() { return blocksByCycle; }
+    public int totalBlocks() { return totalBlocks(cycle); }
+    public int totalBlocks(Cycle value) { return blocks(value).values().stream().mapToInt(List::size).sum(); }
 
     public ScheduleTemplate withCycle(Cycle newCycle) {
-        return new ScheduleTemplate(schemaVersion, name, newCycle, workflowTemplate, pauseMinutes, blocksByDay);
+        return withCycles(schemaVersion, name, newCycle, workflowTemplate, pauseMinutes, iconId, blocksByCycle);
     }
 
     public ScheduleTemplate withWorkflowTemplate(WorkflowTemplate newWorkflowTemplate) {
-        return new ScheduleTemplate(schemaVersion, newWorkflowTemplate.label(), cycle, newWorkflowTemplate,
-                pauseMinutes, blocksByDay);
+        return withCycles(schemaVersion, name, cycle, newWorkflowTemplate, pauseMinutes, iconId, blocksByCycle);
     }
 }

@@ -876,3 +876,158 @@
     -fx-background-insets: 0;
     -fx-background-radius: 7px;
 }
+
+.manager-back-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0 0 8px 0;
+    -fx-text-fill: -fx-livara-muted;
+    -fx-alignment: CENTER_LEFT;
+}
+.manager-back-button:hover,
+.manager-back-button:focused {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -fx-livara-accent;
+}
+.dashboard-page {
+    -fx-background-color: transparent;
+}
+.main-view-host {
+    -fx-background-color: transparent;
+}
+
+.manager-scroll,
+.manager-scroll .viewport,
+.manager-scroll .content {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+.block-editor-section {
+    -fx-background-color: -fx-livara-surface-raised;
+    -fx-background-radius: 11px;
+    -fx-border-color: -fx-livara-border;
+    -fx-border-radius: 11px;
+    -fx-padding: 12px;
+}
+.block-editor {
+    -fx-spacing: 6px;
+}
+.block-editor-row {
+    -fx-background-color: -fx-livara-surface;
+    -fx-background-radius: 8px;
+    -fx-border-color: -fx-livara-border;
+    -fx-border-radius: 8px;
+    -fx-padding: 7px;
+}
+.block-editor-row .combo-box,
+.block-editor-row .text-field,
+.block-editor-row .spinner {
+    -fx-min-height: 30px;
+    -fx-pref-height: 30px;
+}
+.manager-day-label {
+    -fx-font-family: "Monospace";
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-min-width: 35px;
+    -fx-text-fill: -fx-livara-accent;
+}
+.block-editor-tools {
+    -fx-padding: 4px 0 0 0;
+}
+.block-editor-tools .label {
+    -fx-font-family: "Monospace";
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-faint;
+}
+
+.manager-section {
+    -fx-background-color: -fx-livara-surface-raised;
+    -fx-background-radius: 12px;
+    -fx-border-color: -fx-livara-border;
+    -fx-border-radius: 12px;
+    -fx-padding: 14px 16px 12px 16px;
+}
+.manager-section-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-text;
+}
+.manager-section-hint {
+    -fx-font-size: 10px;
+    -fx-text-fill: -fx-livara-muted;
+}
+.manager-active-badge {
+    -fx-background-color: -fx-livara-accent-soft;
+    -fx-background-radius: 9px;
+    -fx-border-color: -fx-livara-border-strong;
+    -fx-border-radius: 9px;
+    -fx-padding: 9px 12px;
+    -fx-font-family: "Monospace";
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-accent;
+    -fx-text-alignment: RIGHT;
+}
+.property-group {
+    -fx-min-width: 0;
+}
+.property-label {
+    -fx-font-family: "Monospace";
+    -fx-font-size: 8px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-faint;
+}
+.block-editor-row {
+    -fx-padding: 10px;
+}
+.block-editor-row .combo-box,
+.block-editor-row .text-field,
+.block-editor-row .spinner {
+    -fx-background-insets: 0;
+}
+
+.template-library {
+    -fx-padding: 2px 0 0 0;
+}
+.template-card {
+    -fx-background-color: -fx-livara-surface;
+    -fx-background-radius: 12px;
+    -fx-border-color: -fx-livara-border;
+    -fx-border-radius: 12px;
+    -fx-padding: 13px;
+    -fx-cursor: hand;
+}
+.template-card:hover {
+    -fx-background-color: -fx-livara-surface-hover;
+    -fx-border-color: -fx-livara-border-strong;
+}
+.template-card.selected {
+    -fx-background-color: -fx-livara-accent-soft;
+    -fx-border-color: -fx-livara-accent;
+}
+.template-card-icon {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-accent;
+    -fx-stroke-width: 2px;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+    -fx-min-width: 23px;
+    -fx-pref-width: 23px;
+    -fx-max-width: 23px;
+    -fx-min-height: 23px;
+    -fx-pref-height: 23px;
+    -fx-max-height: 23px;
+}
+.template-card-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-text;
+}
+.template-card-hint {
+    -fx-font-size: 9px;
+    -fx-text-fill: -fx-livara-muted;
+}

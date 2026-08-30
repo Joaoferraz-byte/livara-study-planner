@@ -2,6 +2,7 @@ package com.joaoferraz.livara.studyplanner.ui;
 
 import com.joaoferraz.livara.studyplanner.domain.Cycle;
 import com.joaoferraz.livara.studyplanner.domain.DefaultScheduleFactory;
+import com.joaoferraz.livara.studyplanner.domain.FocusArea;
 import com.joaoferraz.livara.studyplanner.domain.ProgressState;
 import com.joaoferraz.livara.studyplanner.domain.ScheduleService;
 import com.joaoferraz.livara.studyplanner.domain.ScheduleTemplate;
@@ -25,6 +26,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
@@ -38,6 +40,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.Separator;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -50,9 +53,11 @@ import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.SVGPath;
 import javafx.stage.Modality;
+import javafx.stage.Popup;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 import javafx.util.Duration;
+import javafx.util.StringConverter;
 import javafx.stage.Stage;
 import javafx.geometry.Rectangle2D;
 
@@ -102,11 +107,115 @@ public final class StudyPlannerApp extends Application {
     private final Arc progressArc = new Arc();
     private final Label progressRingValue = new Label();
     private final MenuButton menu = new MenuButton("Menu");
+    private final StackPane mainViewHost = new StackPane();
+    private VBox dashboardPage;
     private SVGPath menuIcon;
     private SVGPath manageIcon;
     private Stage primaryStage;
     private boolean compactLayout;
     private ScheduleTemplate current;
+
+    private static final class BlockEditorRow {
+        private final DayOfWeek day;
+        private final ComboBox<FocusArea> focus;
+        private final TextField topic;
+        private final Spinner<Integer> duration;
+        private final Spinner<Integer> pause;
+        private final VBox row;
+        private final VBox properties;
+        private final Label focusSummary;
+        private final Label topicSummary;
+        private final Label timingSummary;
+        private boolean expanded;
+        private Runnable editAction = () -> { };
+
+        private BlockEditorRow(DayOfWeek day, StudyBlock block, Runnable removeAction) {
+            this.day = day;
+            this.focus = new ComboBox<>();
+            this.focus.getItems().addAll(FocusArea.values());
+            this.focus.setConverter(new StringConverter<>() {
+                @Override public String toString(FocusArea value) { return value == null ? "" : value.label(); }
+                @Override public FocusArea fromString(String value) { return value == null ? null : FocusArea.fromId(value); }
+            });
+            this.focus.setValue(block.focus());
+            this.topic = new TextField(block.topic());
+            this.duration = new Spinner<>(new SpinnerValueFactory.IntegerSpinnerValueFactory(30, 180,
+                    (int) block.duration().toMinutes(), 15));
+            this.pause = new Spinner<>(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 60,
+                    block.breakAfterMinutes(), 15));
+            Label dayLabel = new Label(day.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH).toUpperCase());
+            dayLabel.getStyleClass().add("manager-day-label");
+            focusSummary = new Label();
+            focusSummary.getStyleClass().add("block-card-focus");
+            topicSummary = new Label();
+            topicSummary.getStyleClass().add("block-card-topic");
+            timingSummary = new Label();
+            timingSummary.getStyleClass().add("block-card-timing");
+            VBox summary = new VBox(3, focusSummary, topicSummary);
+            HBox.setHgrow(summary, Priority.ALWAYS);
+            Button edit = new Button("Edit");
+            edit.getStyleClass().add("secondary-button");
+            edit.setOnAction(event -> editAction.run());
+            Button remove = new Button("Remove");
+            remove.getStyleClass().add("danger-button");
+            remove.setOnAction(event -> removeAction.run());
+            HBox identity = new HBox(10, dayLabel, summary, timingSummary, edit, remove);
+            identity.setAlignment(Pos.CENTER_LEFT);
+            properties = new VBox(5);
+            properties.getStyleClass().add("block-card-details");
+            properties.setVisible(false);
+            properties.setManaged(false);
+            row = new VBox(7, identity, properties);
+            row.getStyleClass().add("block-editor-row");
+            row.setOnMouseClicked(event -> {
+                if (!(event.getTarget() instanceof Button)) {
+                    toggleProperties();
+                }
+            });
+            refreshSummary();
+        }
+
+        private void setEditAction(Runnable action) {
+            editAction = action;
+        }
+
+        private void refreshSummary() {
+            focusSummary.setText(focus.getValue() == null ? "Choose a focus" : focus.getValue().label());
+            topicSummary.setText(topic.getText());
+            timingSummary.setText(duration.getValue() + " min  ·  " + pause.getValue() + " min pause");
+            properties.getChildren().setAll(new Label("Focus: " + focusSummary.getText()),
+                    new Label("Topic: " + topicSummary.getText()),
+                    new Label("Timing: " + timingSummary.getText()));
+            properties.getChildren().forEach(node -> node.getStyleClass().add("block-card-detail"));
+        }
+
+        private void toggleProperties() {
+            expanded = !expanded;
+            if (expanded) {
+                properties.setManaged(true);
+                properties.setVisible(true);
+                properties.setOpacity(0);
+                FadeTransition fade = new FadeTransition(Duration.millis(170), properties);
+                fade.setToValue(1);
+                fade.play();
+            } else {
+                FadeTransition fade = new FadeTransition(Duration.millis(130), properties);
+                fade.setToValue(0);
+                fade.setOnFinished(event -> {
+                    properties.setVisible(false);
+                    properties.setManaged(false);
+                    properties.setOpacity(1);
+                });
+                fade.play();
+            }
+            row.pseudoClassStateChanged(javafx.css.PseudoClass.getPseudoClass("expanded"), expanded);
+        }
+
+        private StudyBlock toBlock(int order) {
+            return new StudyBlock(order, focus.getValue(), topic.getText(),
+                    java.time.Duration.ofMinutes(duration.getValue()), pause.getValue());
+        }
+    }
     private ProgressState progress;
     private List<StudySessionItem> sessionItems = List.of();
     private String expandedItemId;
@@ -142,9 +251,13 @@ public final class StudyPlannerApp extends Application {
         contentRoot.setPadding(new Insets(22, 26, 16, 26));
         contentRoot.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         StackPane.setAlignment(contentRoot, Pos.TOP_LEFT);
-        VBox shell = new VBox(16, buildTopBar(), buildHero(), buildDashboardGrid());
-        shell.getStyleClass().add("dashboard-shell");
+        dashboardPage = new VBox(16, buildHero(), buildDashboardGrid());
+        dashboardPage.getStyleClass().add("dashboard-page");
         VBox.setVgrow(dashboardGrid, Priority.ALWAYS);
+        mainViewHost.getChildren().setAll(dashboardPage);
+        VBox shell = new VBox(16, buildTopBar(), mainViewHost);
+        shell.getStyleClass().add("dashboard-shell");
+        VBox.setVgrow(mainViewHost, Priority.ALWAYS);
         contentRoot.setCenter(shell);
         sceneRoot.getChildren().addAll(ambient, contentRoot);
 
@@ -230,7 +343,7 @@ public final class StudyPlannerApp extends Application {
         manage.setAccessibleText("Manage templates and cycles");
         manage.setTooltip(new Tooltip("Manage templates and cycles"));
         manage.getStyleClass().addAll("menu-button", "manage-button");
-        manage.setOnAction(event -> openTemplateManager());
+        manage.setOnAction(event -> showTemplatePage());
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox actions = new HBox(8, manage, menu);
@@ -479,14 +592,7 @@ public final class StudyPlannerApp extends Application {
         new ParallelTransition(fade, scale).play();
     }
 
-    private void openTemplateManager() {
-        Stage dialog = new Stage();
-        dialog.initOwner(primaryStage);
-        dialog.initModality(Modality.WINDOW_MODAL);
-        dialog.setTitle("Manage templates and cycles");
-        dialog.setMinWidth(620);
-        dialog.setMinHeight(500);
-
+    private void showTemplatePage() {
         Label eyebrow = new Label("PLANNER MANAGEMENT");
         eyebrow.getStyleClass().add("manager-eyebrow");
         Label title = new Label("Templates & cycles");
@@ -494,17 +600,34 @@ public final class StudyPlannerApp extends Application {
         Label subtitle = new Label("Shape the active study system without leaving the dashboard.");
         subtitle.setWrapText(true);
         subtitle.getStyleClass().add("manager-subtitle");
+        Button back = new Button("Back to dashboard");
+        back.getStyleClass().add("manager-back-button");
+        back.setOnAction(event -> showDashboardPage());
 
         TextField name = new TextField(current.name());
         name.setPromptText("Template name");
         name.getStyleClass().add("manager-field");
         ComboBox<Cycle> cycle = new ComboBox<>();
         cycle.getItems().addAll(Cycle.values());
+        cycle.setConverter(new StringConverter<>() {
+            @Override public String toString(Cycle value) { return value == null ? "" : "Cycle " + value.label(); }
+            @Override public Cycle fromString(String value) { return Cycle.A; }
+        });
         cycle.setValue(current.cycle());
+        cycle.setOnAction(event -> {
+            if (cycle.getValue() != null && cycle.getValue() != current.cycle()) {
+                current = current.withCycle(cycle.getValue());
+                showTemplatePage();
+            }
+        });
         cycle.setMaxWidth(Double.MAX_VALUE);
         cycle.getStyleClass().add("manager-field");
         ComboBox<WorkflowTemplate> workflow = new ComboBox<>();
         workflow.getItems().addAll(WorkflowTemplate.values());
+        workflow.setConverter(new StringConverter<>() {
+            @Override public String toString(WorkflowTemplate value) { return value == null ? "" : value.label(); }
+            @Override public WorkflowTemplate fromString(String value) { return WorkflowTemplate.MARKET_PROGRAMMING; }
+        });
         workflow.setValue(current.workflowTemplate());
         workflow.setMaxWidth(Double.MAX_VALUE);
         workflow.getStyleClass().add("manager-field");
@@ -512,15 +635,66 @@ public final class StudyPlannerApp extends Application {
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(15, 60, current.pauseMinutes(), 15));
         pause.setMaxWidth(Double.MAX_VALUE);
         pause.getStyleClass().add("manager-field");
+        ComboBox<String> icon = new ComboBox<>();
+        icon.getItems().addAll("layout-dashboard", "calendar", "notebook", "book-2", "bookmark", "folder", "palette", "archive");
+        icon.setValue(current.iconId());
+        icon.setConverter(new StringConverter<>() {
+            @Override public String toString(String value) {
+                return value == null ? "" : value.replace('-', ' ').toUpperCase(java.util.Locale.ENGLISH);
+            }
+            @Override public String fromString(String value) { return value == null ? "layout-dashboard" : value; }
+        });
+        icon.setCellFactory(list -> new javafx.scene.control.ListCell<>() {
+            @Override protected void updateItem(String value, boolean empty) {
+                super.updateItem(value, empty);
+                setText(empty || value == null ? null : value.replace('-', ' ').toUpperCase(java.util.Locale.ENGLISH));
+                setGraphic(empty || value == null ? null : TablerIcon.icon(value));
+            }
+        });
+        icon.setMaxWidth(Double.MAX_VALUE);
+        icon.getStyleClass().add("manager-field");
 
         GridPane form = new GridPane();
         form.setHgap(12);
         form.setVgap(10);
         form.getStyleClass().add("manager-form");
+        form.setVisible(false);
+        form.setManaged(false);
         addManagerField(form, 0, "TEMPLATE NAME", name);
         addManagerField(form, 1, "CYCLE", cycle);
         addManagerField(form, 2, "WORKFLOW", workflow);
         addManagerField(form, 3, "PAUSE MINUTES", pause);
+        addManagerField(form, 4, "TEMPLATE ICON", icon);
+
+        VBox blockEditor = new VBox(6);
+        blockEditor.getStyleClass().add("block-editor");
+        List<BlockEditorRow> blockRows = new ArrayList<>();
+        for (DayOfWeek day : DayOfWeek.values()) {
+            for (StudyBlock block : current.blocks(day)) {
+                addBlockEditorRow(blockEditor, blockRows, day, block);
+            }
+        }
+        ComboBox<DayOfWeek> addDay = new ComboBox<>();
+        addDay.getItems().addAll(DayOfWeek.values());
+        addDay.setConverter(new StringConverter<>() {
+            @Override public String toString(DayOfWeek value) {
+                return value == null ? "" : value.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
+            }
+            @Override public DayOfWeek fromString(String value) { return DayOfWeek.MONDAY; }
+        });
+        addDay.setValue(DayOfWeek.MONDAY);
+        Button addBlock = new Button("Add block");
+        addBlock.getStyleClass().add("secondary-button");
+        addBlock.setOnAction(event -> showAddBlockPopup(blockEditor, blockRows, addDay.getValue(),
+                new StudyBlock(blockRows.size() + 1, FocusArea.MARKET_PROGRAMMING,
+                        "New focus block", java.time.Duration.ofMinutes(60), pause.getValue())));
+        HBox blockTools = new HBox(8, new Label("ADD TO"), addDay, addBlock);
+        blockTools.setAlignment(Pos.CENTER_LEFT);
+        blockTools.getStyleClass().add("block-editor-tools");
+        Label blocksTitle = new Label("BLOCKS & PROPERTIES");
+        blocksTitle.getStyleClass().add("manager-label");
+        VBox blockSection = new VBox(7, blocksTitle, blockEditor, blockTools);
+        blockSection.getStyleClass().add("block-editor-section");
 
         Label scope = new Label("This editor updates the active schedule and preserves its validated block sequence.\n"
                 + "Cycle A and B are available as the built-in rotation modes.");
@@ -531,14 +705,14 @@ public final class StudyPlannerApp extends Application {
         save.getStyleClass().add("primary-button");
         save.setOnAction(event -> {
             try {
-                current = rebuildTemplate(name.getText(), cycle.getValue(), workflow.getValue(), pause.getValue());
+                current = rebuildEditedTemplate(name.getText(), cycle.getValue(), workflow.getValue(), pause.getValue(), icon.getValue(), blockRows);
                 progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
                 persistSchedule();
                 persistProgress();
                 expandedItemId = null;
                 renderSession();
                 statusLabel.setText("Template updated.");
-                dialog.close();
+                showDashboardPage();
             } catch (RuntimeException exception) {
                 showError("Unable to save template", exception.getMessage());
             }
@@ -556,7 +730,7 @@ public final class StudyPlannerApp extends Application {
                 expandedItemId = null;
                 renderSession();
                 statusLabel.setText("New template created.");
-                dialog.close();
+                showDashboardPage();
             } catch (RuntimeException exception) {
                 showError("Unable to create template", exception.getMessage());
             }
@@ -575,7 +749,7 @@ public final class StudyPlannerApp extends Application {
                 expandedItemId = null;
                 renderSession();
                 statusLabel.setText("Active template removed; default restored.");
-                dialog.close();
+                showDashboardPage();
             } catch (IOException | RuntimeException exception) {
                 showError("Unable to remove template", exception.getMessage());
             }
@@ -585,20 +759,262 @@ public final class StudyPlannerApp extends Application {
         HBox.setHgrow(actions.getChildren().get(1), Priority.ALWAYS);
         actions.setAlignment(Pos.CENTER_LEFT);
         actions.getStyleClass().add("manager-actions");
-        VBox content = new VBox(8, eyebrow, title, subtitle, new Separator(), form, scope, actions);
+        VBox intro = new VBox(4, eyebrow, title, subtitle);
+        HBox pageHeader = new HBox(16, back, intro);
+        pageHeader.setAlignment(Pos.TOP_LEFT);
+        HBox.setHgrow(intro, Priority.ALWAYS);
+        Label active = new Label("ACTIVE TEMPLATE\n" + current.name());
+        active.getStyleClass().add("manager-active-badge");
+        pageHeader.getChildren().add(active);
+
+        FlowPane templateLibrary = new FlowPane();
+        templateLibrary.setHgap(10);
+        templateLibrary.setVgap(10);
+        templateLibrary.setPrefWrapLength(760);
+        templateLibrary.getStyleClass().add("template-library");
+        List<VBox> templateCards = new ArrayList<>();
+        addTemplateCard(templateLibrary, templateCards, current.name(),
+                "Complete study system · " + current.totalBlocks() + " blocks", TablerIcon.icon(current.iconId()), true);
+        addTemplateCard(templateLibrary, templateCards, "New template",
+                "Start a complete study system", TablerIcon.bookmark(), false);
+        Label libraryTitle = new Label("TEMPLATE LIBRARY");
+        libraryTitle.getStyleClass().add("manager-label");
+        Label libraryHint = new Label("Templates contain their cycles, blocks, pauses and tasks. Select one to edit it below.");
+        libraryHint.getStyleClass().add("manager-section-hint");
+        VBox librarySection = new VBox(8, new VBox(2, libraryTitle, libraryHint), templateLibrary);
+        librarySection.getStyleClass().add("manager-section");
+
+        Label detailsTitle = new Label("Template identity");
+        detailsTitle.getStyleClass().add("manager-section-title");
+        Label detailsHint = new Label("One complete system: choose its identity here, then edit the active cycle below.");
+        detailsHint.getStyleClass().add("manager-section-hint");
+        Label identitySummary = new Label();
+        identitySummary.getStyleClass().add("identity-summary");
+        Button editIdentity = new Button("Edit details");
+        editIdentity.getStyleClass().add("secondary-button");
+        Runnable refreshIdentity = () -> identitySummary.setText(name.getText() + "  ·  Cycle " + cycle.getValue().label()
+                + "  ·  " + workflow.getValue().label() + "  ·  " + pause.getValue() + " min pause");
+        refreshIdentity.run();
+        editIdentity.setOnAction(event -> showIdentityPopup(editIdentity, name, cycle, workflow, pause, icon, refreshIdentity));
+        HBox identityBody = new HBox(12, identitySummary, editIdentity);
+        identityBody.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(identitySummary, Priority.ALWAYS);
+        VBox detailsHeading = new VBox(2, detailsTitle, detailsHint);
+        VBox detailsSection = new VBox(8, detailsHeading, identityBody);
+        detailsSection.getStyleClass().add("manager-section");
+
+        VBox content = new VBox(16, pageHeader, librarySection, detailsSection, blockSection, scope, actions);
         content.getStyleClass().add("manager-panel");
         content.setFillWidth(true);
         VBox.setVgrow(form, Priority.ALWAYS);
-        Scene scene = new Scene(content);
-        scene.getStylesheets().add(Objects.requireNonNull(
-                getClass().getResource("/style.css"), "style.css resource is missing").toExternalForm());
-        dialog.setScene(scene);
-        dialog.show();
+        content.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        ScrollPane managerScroll = new ScrollPane(content);
+        managerScroll.setFitToWidth(true);
+        managerScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        managerScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        managerScroll.getStyleClass().add("manager-scroll");
+        mainViewHost.getChildren().setAll(managerScroll);
         content.setOpacity(0);
         content.setTranslateY(10);
         FadeTransition fade = new FadeTransition(Duration.millis(180), content);
         fade.setToValue(1);
         javafx.animation.TranslateTransition slide = new javafx.animation.TranslateTransition(Duration.millis(180), content);
+        slide.setToY(0);
+        new ParallelTransition(fade, slide).play();
+    }
+
+    private void showIdentityPopup(Node anchor, TextField name, ComboBox<Cycle> cycle,
+                                   ComboBox<WorkflowTemplate> workflow, Spinner<Integer> pause,
+                                   ComboBox<String> icon, Runnable refresh) {
+        VBox panel = new VBox(10);
+        panel.getStyleClass().add("editor-popup");
+        Label title = new Label("Edit template identity");
+        title.getStyleClass().add("popup-title");
+        TextField nameCopy = new TextField(name.getText());
+        nameCopy.setPromptText("Template name");
+        ComboBox<Cycle> cycleCopy = new ComboBox<>();
+        cycleCopy.getItems().addAll(Cycle.values());
+        cycleCopy.setValue(cycle.getValue());
+        ComboBox<WorkflowTemplate> workflowCopy = new ComboBox<>();
+        workflowCopy.getItems().addAll(WorkflowTemplate.values());
+        workflowCopy.setValue(workflow.getValue());
+        Spinner<Integer> pauseCopy = new Spinner<>(new SpinnerValueFactory.IntegerSpinnerValueFactory(15, 60, pause.getValue(), 15));
+        ComboBox<String> iconCopy = new ComboBox<>();
+        iconCopy.getItems().addAll(icon.getItems());
+        iconCopy.setValue(icon.getValue());
+        for (Node node : List.of(nameCopy, cycleCopy, workflowCopy, pauseCopy, iconCopy)) {
+            node.getStyleClass().add("popup-field");
+            if (node instanceof Control control) control.setMaxWidth(Double.MAX_VALUE);
+        }
+        Button cancel = new Button("Cancel");
+        cancel.getStyleClass().add("secondary-button");
+        Button apply = new Button("Apply details");
+        apply.getStyleClass().add("primary-button");
+        HBox actions = new HBox(8, cancel, apply);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        panel.getChildren().setAll(title, new Label("Name"), nameCopy, new Label("Cycle"), cycleCopy,
+                new Label("Workflow"), workflowCopy, new Label("Pause"), pauseCopy, new Label("Icon"), iconCopy, actions);
+        Popup popup = new Popup();
+        popup.setAutoHide(true);
+        popup.getContent().add(panel);
+        cancel.setOnAction(event -> popup.hide());
+        apply.setOnAction(event -> {
+            name.setText(nameCopy.getText());
+            cycle.setValue(cycleCopy.getValue());
+            workflow.setValue(workflowCopy.getValue());
+            pause.getValueFactory().setValue(pauseCopy.getValue());
+            icon.setValue(iconCopy.getValue());
+            refresh.run();
+            popup.hide();
+        });
+        popup.setOnShown(event -> {
+            javafx.geometry.Point2D point = anchor.localToScreen(0, anchor.getLayoutBounds().getHeight() + 8);
+            popup.setX(point.getX());
+            popup.setY(point.getY());
+        });
+        popup.show(anchor.getScene().getWindow(), 0, 0);
+    }
+
+    private void showBlockEditorPopup(BlockEditorRow row) {
+        VBox panel = new VBox(10);
+        panel.getStyleClass().add("editor-popup");
+        Label title = new Label("Edit study block");
+        title.getStyleClass().add("popup-title");
+        Button apply = new Button("Apply block");
+        apply.getStyleClass().add("primary-button");
+        Button cancel = new Button("Cancel");
+        cancel.getStyleClass().add("secondary-button");
+        HBox actions = new HBox(8, cancel, apply);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        panel.getChildren().setAll(title, new Label("Focus"), row.focus, new Label("Topic"), row.topic,
+                new Label("Focus minutes"), row.duration, new Label("Break after"), row.pause, actions);
+        Popup popup = new Popup();
+        popup.setAutoHide(true);
+        popup.getContent().add(panel);
+        cancel.setOnAction(event -> popup.hide());
+        apply.setOnAction(event -> {
+            row.refreshSummary();
+            popup.hide();
+        });
+        popup.setOnShown(event -> {
+            javafx.geometry.Point2D point = row.row.localToScreen(30, 30);
+            popup.setX(point.getX());
+            popup.setY(point.getY());
+        });
+        popup.show(row.row.getScene().getWindow(), 0, 0);
+    }
+
+    private void showAddBlockPopup(VBox editor, List<BlockEditorRow> rows, DayOfWeek day, StudyBlock defaults) {
+        BlockEditorRow draft = new BlockEditorRow(day, defaults, () -> { });
+        VBox panel = new VBox(10);
+        panel.getStyleClass().add("editor-popup");
+        Label title = new Label("Add study block");
+        title.getStyleClass().add("popup-title");
+        Button cancel = new Button("Cancel");
+        cancel.getStyleClass().add("secondary-button");
+        Button add = new Button("Add block");
+        add.getStyleClass().add("primary-button");
+        HBox actions = new HBox(8, cancel, add);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        panel.getChildren().setAll(title, new Label("Focus"), draft.focus, new Label("Topic"), draft.topic,
+                new Label("Focus minutes"), draft.duration, new Label("Break after"), draft.pause, actions);
+        Popup popup = new Popup();
+        popup.setAutoHide(true);
+        popup.getContent().add(panel);
+        cancel.setOnAction(event -> popup.hide());
+        add.setOnAction(event -> {
+            draft.refreshSummary();
+            draft.setEditAction(() -> showBlockEditorPopup(draft));
+            rows.add(draft);
+            editor.getChildren().add(draft.row);
+            popup.hide();
+        });
+        popup.setOnShown(event -> {
+            javafx.geometry.Point2D point = add.localToScreen(0, add.getLayoutBounds().getHeight() + 8);
+            popup.setX(point.getX());
+            popup.setY(point.getY());
+        });
+        popup.show(add.getScene().getWindow(), 0, 0);
+    }
+
+    private void addTemplateCard(FlowPane library, List<VBox> cards, String name, String description,
+                                 SVGPath icon, boolean selected) {
+        Label title = new Label(name);
+        title.getStyleClass().add("template-card-title");
+        Label hint = new Label(description);
+        hint.getStyleClass().add("template-card-hint");
+        icon.getStyleClass().add("template-card-icon");
+        VBox card = new VBox(8, icon, title, hint);
+        card.setPrefWidth(168);
+        card.setMinHeight(112);
+        card.getStyleClass().add("template-card");
+        if (selected) {
+            card.getStyleClass().add("selected");
+        }
+        card.setOnMouseClicked(event -> {
+            for (VBox candidate : cards) {
+                candidate.getStyleClass().remove("selected");
+            }
+            card.getStyleClass().add("selected");
+            card.setScaleX(0.98);
+            card.setScaleY(0.98);
+            ScaleTransition snap = new ScaleTransition(Duration.millis(150), card);
+            snap.setToX(1);
+            snap.setToY(1);
+            snap.setInterpolator(Interpolator.EASE_OUT);
+            snap.play();
+        });
+        cards.add(card);
+        library.getChildren().add(card);
+    }
+
+    private void addBlockEditorRow(VBox editor, List<BlockEditorRow> rows, DayOfWeek day, StudyBlock block) {
+        final BlockEditorRow[] holder = new BlockEditorRow[1];
+        holder[0] = new BlockEditorRow(day, block, () -> {
+            rows.remove(holder[0]);
+            editor.getChildren().remove(holder[0].row);
+        });
+        holder[0].setEditAction(() -> showBlockEditorPopup(holder[0]));
+        rows.add(holder[0]);
+        editor.getChildren().add(holder[0].row);
+    }
+
+    private ScheduleTemplate rebuildEditedTemplate(String name, Cycle cycle, WorkflowTemplate workflow,
+                                                   int pauseMinutes, String iconId, List<BlockEditorRow> rows) {
+        if (rows.isEmpty()) {
+            throw new IllegalArgumentException("A template needs at least one study block");
+        }
+        EnumMap<DayOfWeek, List<StudyBlock>> days = new EnumMap<>(DayOfWeek.class);
+        for (DayOfWeek day : DayOfWeek.values()) {
+            List<StudyBlock> dayBlocks = new ArrayList<>();
+            int order = 1;
+            for (BlockEditorRow row : rows) {
+                if (row.day == day) {
+                    StudyBlock edited = row.toBlock(order++);
+                    dayBlocks.add(new StudyBlock(edited.order(), edited.focus(), edited.topic(), edited.duration(), pauseMinutes));
+                }
+            }
+            days.put(day, dayBlocks);
+        }
+        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
+        for (Cycle value : Cycle.values()) {
+            cycles.put(value, value == current.cycle() ? days : current.blocks(value));
+        }
+        ScheduleTemplate edited = ScheduleTemplate.withCycles(2, name, cycle, workflow, pauseMinutes, iconId, cycles);
+        List<String> errors = service.validate(edited);
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(String.join("\\n", errors));
+        }
+        return edited;
+    }
+
+    private void showDashboardPage() {
+        mainViewHost.getChildren().setAll(dashboardPage);
+        dashboardPage.setOpacity(0);
+        dashboardPage.setTranslateY(-8);
+        FadeTransition fade = new FadeTransition(Duration.millis(160), dashboardPage);
+        fade.setToValue(1);
+        javafx.animation.TranslateTransition slide = new javafx.animation.TranslateTransition(Duration.millis(160), dashboardPage);
         slide.setToY(0);
         new ParallelTransition(fade, slide).play();
     }

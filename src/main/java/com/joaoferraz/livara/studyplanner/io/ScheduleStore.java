@@ -34,11 +34,27 @@ public final class ScheduleStore {
                 ? WorkflowTemplate.fromId(value)
                 : WorkflowTemplate.MARKET_PROGRAMMING;
         int pauseMinutes = integer(root, "pauseMinutes");
+        String iconId = root.get("iconId") instanceof String value ? value : "layout-dashboard";
+        Object cyclesValue = root.get("cycles");
+        if (cyclesValue instanceof Map<?, ?> cycleMap) {
+            EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
+            for (Cycle value : Cycle.values()) {
+                Object rawDays = cycleMap.get(value.name());
+                if (!(rawDays instanceof Map<?, ?> dayMap)) {
+                    throw new IOException("Each cycle must contain a days object");
+                }
+                cycles.put(value, parseDays(dayMap));
+            }
+            return ScheduleTemplate.withCycles(schemaVersion, name, cycle, workflowTemplate, pauseMinutes, iconId, cycles);
+        }
         Object daysValue = root.get("days");
         if (!(daysValue instanceof Map<?, ?> dayMap)) {
             throw new IOException("Schedule document must contain a days object");
         }
+        return new ScheduleTemplate(schemaVersion, name, cycle, workflowTemplate, pauseMinutes, parseDays(dayMap));
+    }
 
+    private static Map<DayOfWeek, List<StudyBlock>> parseDays(Map<?, ?> dayMap) throws IOException {
         EnumMap<DayOfWeek, List<StudyBlock>> days = new EnumMap<>(DayOfWeek.class);
         for (DayOfWeek day : DayOfWeek.values()) {
             Object blocksValue = dayMap.get(day.name());
@@ -48,17 +64,14 @@ public final class ScheduleStore {
                     if (!(rawBlock instanceof Map<?, ?> block)) {
                         throw new IOException("Each study block must be a JSON object");
                     }
-                    blocks.add(new StudyBlock(
-                            integer(block, "order"),
-                            FocusArea.fromId(string(block, "focus")),
-                            string(block, "topic"),
-                            Duration.ofMinutes(longInteger(block, "durationMinutes")),
+                    blocks.add(new StudyBlock(integer(block, "order"), FocusArea.fromId(string(block, "focus")),
+                            string(block, "topic"), Duration.ofMinutes(longInteger(block, "durationMinutes")),
                             integer(block, "breakAfterMinutes")));
                 }
             }
             days.put(day, List.copyOf(blocks));
         }
-        return new ScheduleTemplate(schemaVersion, name, cycle, workflowTemplate, pauseMinutes, days);
+        return days;
     }
 
     public void save(Path path, ScheduleTemplate template) throws IOException {
@@ -82,28 +95,39 @@ public final class ScheduleStore {
         field(json, "cycle", quote(template.cycle().name()), true);
         field(json, "workflowTemplate", quote(template.workflowTemplate().id()), true);
         field(json, "pauseMinutes", Integer.toString(template.pauseMinutes()), false);
-        json.append("  \"days\": {\n");
-        DayOfWeek[] days = DayOfWeek.values();
-        for (int dayIndex = 0; dayIndex < days.length; dayIndex++) {
-            DayOfWeek day = days[dayIndex];
-            json.append("    ").append(quote(day.name())).append(": [\n");
-            List<StudyBlock> blocks = template.blocks(day);
-            for (int blockIndex = 0; blockIndex < blocks.size(); blockIndex++) {
-                StudyBlock block = blocks.get(blockIndex);
-                json.append("      {\n");
-                field(json, "order", Integer.toString(block.order()), false, 8);
-                field(json, "focus", quote(block.focus().id()), true, 8);
-                field(json, "topic", quote(block.topic()), true, 8);
-                field(json, "durationMinutes", Long.toString(block.duration().toMinutes()), false, 8);
-                json.append("        \"breakAfterMinutes\": ")
-                        .append(block.breakAfterMinutes()).append("\n");
-                json.append("      }").append(blockIndex + 1 == blocks.size() ? "\n" : ",\n");
-            }
-            json.append("    ]").append(dayIndex + 1 == days.length ? "\n" : ",\n");
+        field(json, "iconId", quote(template.iconId()), true);
+        json.append("  \"cycles\": {\n");
+        Cycle[] cycles = Cycle.values();
+        for (int cycleIndex = 0; cycleIndex < cycles.length; cycleIndex++) {
+            Cycle value = cycles[cycleIndex];
+            json.append("    ").append(quote(value.name())).append(": {\n");
+            appendDays(json, template.blocks(value));
+            json.append("    }").append(cycleIndex + 1 == cycles.length ? "\n" : ",\n");
         }
         json.append("  }\n");
         json.append("}");
         return json.toString();
+    }
+
+    private static void appendDays(StringBuilder json, Map<DayOfWeek, List<StudyBlock>> days) {
+        DayOfWeek[] values = DayOfWeek.values();
+        for (int dayIndex = 0; dayIndex < values.length; dayIndex++) {
+            DayOfWeek day = values[dayIndex];
+            json.append("      ").append(quote(day.name())).append(": [\n");
+            List<StudyBlock> blocks = days.getOrDefault(day, List.of());
+            for (int blockIndex = 0; blockIndex < blocks.size(); blockIndex++) {
+                StudyBlock block = blocks.get(blockIndex);
+                json.append("        {\n");
+                field(json, "order", Integer.toString(block.order()), false, 10);
+                field(json, "focus", quote(block.focus().id()), true, 10);
+                field(json, "topic", quote(block.topic()), true, 10);
+                field(json, "durationMinutes", Long.toString(block.duration().toMinutes()), false, 10);
+                json.append("          \"breakAfterMinutes\": ")
+                        .append(block.breakAfterMinutes()).append("\n");
+                json.append("        }").append(blockIndex + 1 == blocks.size() ? "\n" : ",\n");
+            }
+            json.append("      ]").append(dayIndex + 1 == values.length ? "\n" : ",\n");
+        }
     }
 
     private static void field(StringBuilder json, String key, String value, boolean quoted) {

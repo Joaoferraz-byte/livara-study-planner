@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 public final class DefaultScheduleFactory {
     private DefaultScheduleFactory() {
@@ -15,15 +16,15 @@ public final class DefaultScheduleFactory {
     }
 
     public static ScheduleTemplate create(Cycle cycle, WorkflowTemplate workflowTemplate) {
-        List<StudyBlock> sequence = sequence(cycle, workflowTemplate);
-        EnumMap<DayOfWeek, List<StudyBlock>> days = new EnumMap<>(DayOfWeek.class);
-        for (DayOfWeek day : DayOfWeek.values()) {
-            days.put(day, List.of());
+        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
+        for (Cycle value : Cycle.values()) {
+            cycles.put(value, project(value, workflowTemplate));
         }
+        return ScheduleTemplate.withCycles(2, workflowTemplate.label(), cycle, workflowTemplate, 15, cycles);
+    }
 
-        // The domain remains compatible with the existing weekday JSON schema.
-        // The UI treats these entries as one ordered sequence of focus blocks;
-        // weekdays are retained only as a persistence/legacy projection.
+    private static Map<DayOfWeek, List<StudyBlock>> project(Cycle cycle, WorkflowTemplate workflowTemplate) {
+        List<StudyBlock> sequence = sequence(cycle, workflowTemplate);
         DayOfWeek[] activeDays = {
                 DayOfWeek.MONDAY,
                 DayOfWeek.MONDAY,
@@ -45,11 +46,11 @@ public final class DefaultScheduleFactory {
             int pause = index + 1 < sequence.size() ? 15 : 0;
             dayBlocks.add(new StudyBlock(order, source.focus(), source.topic(), source.duration(), pause));
         }
+        EnumMap<DayOfWeek, List<StudyBlock>> result = new EnumMap<>(DayOfWeek.class);
         for (DayOfWeek day : DayOfWeek.values()) {
-            days.put(day, List.copyOf(grouped.get(day)));
+            result.put(day, List.copyOf(grouped.get(day)));
         }
-
-        return new ScheduleTemplate(2, workflowTemplate.label(), cycle, workflowTemplate, 15, days);
+        return result;
     }
 
     public static List<StudyBlock> sequence(Cycle cycle, WorkflowTemplate workflowTemplate) {
