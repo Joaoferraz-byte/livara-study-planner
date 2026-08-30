@@ -48,6 +48,7 @@
 .progress-ring {
     -fx-background-color: -fx-livara-surface-raised;
     -fx-background-radius: 999px;
+    -fx-effect: dropshadow(gaussian, -fx-livara-accent-soft, 16, 0.2, 0, 2);
     -fx-border-color: -fx-livara-border-strong;
     -fx-border-radius: 999px;
     -fx-border-width: 1px;
@@ -202,6 +203,11 @@
     -fx-padding: 16px;
 }
 
+.widget:hover {
+    -fx-border-color: -fx-livara-border-strong;
+    -fx-effect: dropshadow(gaussian, -fx-livara-accent-soft, 16, 0.18, 0, 3);
+}
+
 .widget-heading {
     -fx-padding: 0 0 4px 0;
 }
@@ -232,6 +238,7 @@
 .metric-card:hover {
     -fx-background-color: -fx-livara-accent-soft;
     -fx-border-color: -fx-livara-accent;
+    -fx-effect: dropshadow(gaussian, -fx-livara-accent-soft, 10, 0.24, 0, 2);
 }
 
 .metric-label, .panel-eyebrow {
@@ -288,6 +295,11 @@
 .session-card:hover {
     -fx-background-color: -fx-livara-surface-hover;
     -fx-border-color: -fx-livara-border-strong;
+    -fx-effect: dropshadow(gaussian, -fx-livara-accent-soft, 12, 0.18, 0, 2);
+}
+
+.session-card.expanded {
+    -fx-effect: dropshadow(gaussian, -fx-livara-accent-soft, 18, 0.24, 0, 4);
 }
 
 .session-card.pending {
@@ -560,6 +572,10 @@
     -fx-border-color: -fx-livara-border transparent transparent transparent;
     -fx-border-width: 1px 0 0 0;
     -fx-padding: 9px 0 0 0;
+}
+
+.summary-row-plain {
+    -fx-border-color: transparent;
 }
 
 .summary-row-label {
