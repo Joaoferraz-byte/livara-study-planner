@@ -2,42 +2,82 @@ package com.joaoferraz.livara.studyplanner.ui;
 
 import javafx.scene.shape.SVGPath;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 final class TablerIcon {
+    private static final Pattern PATH = Pattern.compile("<path\\s+[^>]*d=\\\"([^\\\"]+)\\\"[^>]*/?>");
+
     private TablerIcon() {
     }
 
     static SVGPath home() {
-        return icon("M3 10.5L12 3l9 7.5M5 10v10h14V10M9 20v-6h6v6");
+        return icon("home");
     }
 
     static SVGPath folder() {
-        return icon("M3 7h6l2 2h10v10H3z");
+        return icon("folder");
     }
 
     static SVGPath notes() {
-        return icon("M6 3h12v18H6zM9 7h6M9 11h6M9 15h4");
+        return icon("notebook");
     }
 
     static SVGPath project() {
-        return icon("M4 4h16v16H4zM8 8h8M8 12h8M8 16h5");
+        return icon("layout-dashboard");
     }
 
     static SVGPath calendar() {
-        return icon("M5 4h14v16H5zM8 2v4M16 2v4M5 9h14");
+        return icon("calendar");
     }
 
     static SVGPath palette() {
-        return icon("M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h3a2 2 0 0 0 0-4H12zM7.5 10h.01M9.5 7h.01M14.5 7h.01");
+        return icon("palette");
     }
 
     static SVGPath book() {
-        return icon("M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z");
+        return icon("book-2");
     }
 
-    private static SVGPath icon(String content) {
-        SVGPath path = new SVGPath();
-        path.setContent(content);
-        path.getStyleClass().add("tabler-icon");
-        return path;
+    static SVGPath archive() {
+        return icon("archive");
+    }
+
+    static SVGPath bookmark() {
+        return icon("bookmark");
+    }
+
+    static SVGPath settings() {
+        return icon("settings");
+    }
+
+    private static SVGPath icon(String name) {
+        String resource = "/icons/tabler/" + name + ".svg";
+        try (InputStream stream = TablerIcon.class.getResourceAsStream(resource)) {
+            if (stream == null) {
+                throw new IllegalStateException("Missing Tabler icon resource: " + resource);
+            }
+            String svg = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            Matcher matcher = PATH.matcher(svg);
+            StringBuilder pathData = new StringBuilder();
+            while (matcher.find()) {
+                if (pathData.length() > 0) {
+                    pathData.append(' ');
+                }
+                pathData.append(matcher.group(1));
+            }
+            if (pathData.length() == 0) {
+                throw new IllegalStateException("Tabler icon has no path data: " + resource);
+            }
+            SVGPath path = new SVGPath();
+            path.setContent(pathData.toString());
+            path.getStyleClass().add("tabler-icon");
+            return path;
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to load Tabler icon: " + resource, exception);
+        }
     }
 }

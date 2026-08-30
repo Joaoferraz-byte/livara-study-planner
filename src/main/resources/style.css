@@ -49,7 +49,6 @@
 .progress-ring {
     -fx-background-color: -fx-livara-surface-raised;
     -fx-background-radius: 999px;
-    -fx-effect: dropshadow(gaussian, -fx-livara-accent-soft, 16, 0.2, 0, 2);
     -fx-border-color: -fx-livara-border-strong;
     -fx-border-radius: 999px;
     -fx-border-width: 1px;
@@ -153,10 +152,19 @@
     -fx-padding: 0;
 }
 
+.tabler-icon {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-muted;
+    -fx-stroke-width: 2px;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+
 .menu-icon {
     -fx-fill: transparent;
     -fx-stroke: -fx-livara-muted;
-    -fx-stroke-width: 1.6px;
+    -fx-stroke-width: 2px;
+    -fx-translate-y: 0;
     -fx-min-width: 18px;
     -fx-pref-width: 18px;
     -fx-max-width: 18px;
@@ -170,13 +178,35 @@
 }
 
 .menu-button:hover .menu-icon,
-.menu-button:focused .menu-icon {
-    -fx-stroke: -fx-livara-accent;
+.menu-button:focused .menu-icon,
+.manage-button:hover .menu-icon,
+.manage-button:focused .menu-icon {
+    -fx-stroke: -fx-livara-muted;
 }
 
-.menu-button:hover, .menu-button:focused {
+.menu-button:hover, .menu-button:focused,
+.manage-button:hover, .manage-button:focused {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
+}
+.manage-button,
+.manage-button:hover,
+.manage-button:focused,
+.manage-button:pressed {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -fx-livara-muted;
+}
+.manage-button .menu-icon,
+.manage-button:hover .menu-icon,
+.manage-button:focused .menu-icon {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-muted;
+    -fx-stroke-width: 2px;
+}
+.manage-button:hover .menu-icon,
+.manage-button:focused .menu-icon {
+    -fx-stroke: -fx-livara-muted;
 }
 
 .menu-button .arrow-button {
@@ -206,7 +236,6 @@
 
 .widget:hover {
     -fx-border-color: -fx-livara-border-strong;
-    -fx-effect: dropshadow(gaussian, -fx-livara-accent-soft, 16, 0.18, 0, 3);
 }
 
 .widget-heading {
@@ -239,7 +268,6 @@
 .metric-card:hover {
     -fx-background-color: -fx-livara-accent-soft;
     -fx-border-color: -fx-livara-accent;
-    -fx-effect: dropshadow(gaussian, -fx-livara-accent-soft, 10, 0.24, 0, 2);
 }
 
 .metric-label, .panel-eyebrow {
@@ -296,11 +324,9 @@
 .session-card:hover {
     -fx-background-color: -fx-livara-surface-hover;
     -fx-border-color: -fx-livara-border-strong;
-    -fx-effect: dropshadow(gaussian, -fx-livara-accent-soft, 12, 0.18, 0, 2);
 }
 
 .session-card.expanded {
-    -fx-effect: dropshadow(gaussian, -fx-livara-accent-soft, 18, 0.24, 0, 4);
 }
 
 .session-card.pending {
@@ -335,7 +361,8 @@
 
 .session-header {
     -fx-background-color: transparent;
-    -fx-padding: 0 0 11px 0;
+    -fx-padding: 0;
+    -fx-alignment: center-left;
 }
 
 .item-check {
@@ -555,7 +582,7 @@
     -fx-padding: 8px 12px;
 }
 .pause-card .session-header {
-    -fx-padding: 0 0 8px 0;
+    -fx-padding: 0;
 }
 
 .pause-card:hover, .pause-card.active {
@@ -647,7 +674,7 @@
 .folder-link .tabler-icon {
     -fx-fill: transparent;
     -fx-stroke: -fx-livara-muted;
-    -fx-stroke-width: 1.5px;
+    -fx-stroke-width: 2px;
 }
 
 .folder-link:hover {
@@ -677,13 +704,25 @@
 }
 
 .context-menu {
-    -fx-background-radius: 9px;
+    -fx-background-color: -fx-livara-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 11px;
     -fx-border-color: -fx-livara-border-strong;
-    -fx-border-radius: 9px;
+    -fx-border-insets: 0;
+    -fx-border-radius: 11px;
     -fx-padding: 5px;
+}
+.context-menu > .scroll-pane,
+.context-menu > .scroll-pane > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
 }
 
 .menu-item {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
     -fx-padding: 7px 12px;
 }
 
@@ -748,4 +787,92 @@
 .scroll-bar .thumb {
     -fx-padding: 0;
     -fx-background-color: transparent;
+}
+
+/* Template manager: structured, responsive, and intentionally shadow-free. */
+.manager-panel {
+    -fx-background-color: -fx-livara-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 16px;
+    -fx-border-color: -fx-livara-border-strong;
+    -fx-border-insets: 0;
+    -fx-border-radius: 16px;
+    -fx-padding: 24px;
+}
+.manager-eyebrow {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1.5px;
+    -fx-text-fill: -fx-livara-accent;
+}
+.manager-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-text;
+}
+.manager-subtitle, .manager-note {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-livara-muted;
+}
+.manager-form {
+    -fx-padding: 6px 0;
+}
+.manager-label {
+    -fx-font-family: "Monospace";
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-faint;
+}
+.manager-field,
+.manager-field .text-field,
+.manager-field .list-cell {
+    -fx-background-color: -fx-livara-surface-raised;
+    -fx-background-insets: 0;
+    -fx-background-radius: 8px;
+    -fx-border-color: -fx-livara-border;
+    -fx-border-insets: 0;
+    -fx-border-radius: 8px;
+    -fx-text-fill: -fx-livara-text;
+}
+.manager-field:focused,
+.manager-field .text-field:focused {
+    -fx-border-color: -fx-livara-accent;
+}
+.manager-actions {
+    -fx-padding: 10px 0 0 0;
+}
+.secondary-button {
+    -fx-background-color: -fx-livara-surface-raised;
+    -fx-border-color: -fx-livara-border-strong;
+    -fx-text-fill: -fx-livara-text;
+}
+.secondary-button:hover {
+    -fx-background-color: -fx-livara-surface-hover;
+    -fx-border-color: -fx-livara-accent;
+}
+.danger-button {
+    -fx-background-color: transparent;
+    -fx-border-color: -fx-livara-border;
+    -fx-text-fill: -fx-livara-muted;
+}
+.danger-button:hover {
+    -fx-background-color: -fx-livara-surface-hover;
+    -fx-border-color: -fx-livara-success;
+    -fx-text-fill: -fx-livara-text;
+}
+.context-menu .separator:horizontal .line,
+.dialog-pane .separator:horizontal .line {
+    -fx-border-color: -fx-livara-border;
+    -fx-background-color: transparent;
+}
+.context-menu .corner,
+.combo-box-popup .corner,
+.context-menu .background {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+.context-menu .menu-item:focused,
+.context-menu .menu-item:hover {
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
 }
