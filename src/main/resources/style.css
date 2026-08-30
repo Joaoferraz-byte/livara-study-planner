@@ -15,6 +15,7 @@
     -fx-livara-accent-strong: derive(-fx-accent, -12%);
     -fx-livara-success: #8ee6b0;
     -fx-livara-secondary: #c3adff;
+    -fx-livara-brand: #c76b98;
     -fx-background-color: -fx-livara-background;
     -fx-font-family: "Inter", "Noto Sans", sans-serif;
     -fx-font-size: 13px;
@@ -83,7 +84,7 @@
     -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-letter-spacing: 1.8px;
-    -fx-text-fill: -fx-livara-accent;
+    -fx-text-fill: -fx-livara-brand;
 }
 
 .top-context {
