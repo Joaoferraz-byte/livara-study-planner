@@ -78,8 +78,12 @@ import java.util.regex.Pattern;
 public final class StudyPlannerApp extends Application {
     private static final Pattern COLOR = Pattern.compile("\\\"%s\\\"\\s*:\\s*\\\"(#[0-9a-fA-F]{6})\\\"");
     private static final double WIDE_BREAKPOINT = 1040;
+    private static final double PROGRESS_RING_SIZE = 112;
+    private static final double PROGRESS_RING_RADIUS = 49;
     private static final List<String> VAULT_FOLDERS = List.of(
             "Black Box", "Source Notes", "Projects", "Daily Notes", "Xournal++", "References");
+    private static final List<String> TEMPLATE_ICON_IDS = List.of(
+            "x", "layout-dashboard", "calendar", "notebook", "book-2", "bookmark", "folder", "palette", "archive");
 
     private static Path requestedPath;
 
@@ -110,11 +114,12 @@ public final class StudyPlannerApp extends Application {
     private final MenuButton menu = new MenuButton("Menu");
     private final StackPane mainViewHost = new StackPane();
     private VBox dashboardPage;
-    private SVGPath menuIcon;
-    private SVGPath manageIcon;
+    private Node menuIcon;
+    private Node manageIcon;
     private Stage primaryStage;
     private boolean compactLayout;
     private ScheduleTemplate current;
+    private ScheduleTemplate lastSavedTemplate;
 
     private static final class BlockEditorRow {
         private int order;
@@ -246,10 +251,12 @@ public final class StudyPlannerApp extends Application {
         progressPath = schedulePath.resolveSibling(schedulePath.getFileName() + ".progress.properties");
         try {
             current = service.loadOrCreate(schedulePath);
+            lastSavedTemplate = current;
             progress = progressStore.loadOrEmpty(progressPath, current.cycle(), current.workflowTemplate());
         } catch (IOException | RuntimeException exception) {
             showError("Unable to load schedule", exception.getMessage());
             current = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
+            lastSavedTemplate = current;
             progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
         }
 
@@ -314,9 +321,7 @@ public final class StudyPlannerApp extends Application {
         left.setAlignment(Pos.CENTER_LEFT);
 
         Button homeButton = new Button();
-        SVGPath homeIcon = TablerIcon.home();
-        homeIcon.getStyleClass().add("menu-icon");
-        homeButton.setGraphic(homeIcon);
+        homeButton.setGraphic(toolbarIcon("home"));
         homeButton.setFocusTraversable(false);
         homeButton.setAccessibleText("Open dashboard");
         homeButton.setTooltip(new Tooltip("Dashboard"));
@@ -324,8 +329,7 @@ public final class StudyPlannerApp extends Application {
         homeButton.setOnAction(event -> showDashboardPage());
 
         menu.setText("");
-        menuIcon = TablerIcon.menu2();
-        menuIcon.getStyleClass().add("menu-icon");
+        menuIcon = toolbarIcon("menu-2");
         menu.setGraphic(menuIcon);
         menu.setOnMouseEntered(event -> animateScale(menuIcon, compactLayout ? 0.9 : 1.12));
         menu.setOnMouseExited(event -> animateScale(menuIcon, compactLayout ? 0.78 : 1.0));
@@ -356,8 +360,7 @@ public final class StudyPlannerApp extends Application {
         });
 
         Button manage = new Button();
-        manageIcon = TablerIcon.edit();
-        manageIcon.getStyleClass().add("menu-icon");
+        manageIcon = toolbarIcon("edit");
         manage.setGraphic(manageIcon);
         manage.setFocusTraversable(false);
         manage.setAccessibleText("Manage templates and cycles");
@@ -377,6 +380,20 @@ public final class StudyPlannerApp extends Application {
         return bar;
     }
 
+    private Node toolbarIcon(String iconId) {
+        SVGPath glyph = TablerIcon.icon(iconId);
+        glyph.getStyleClass().add("menu-icon");
+        glyph.setScaleX(2.0 / 3.0);
+        glyph.setScaleY(2.0 / 3.0);
+        StackPane slot = new StackPane(glyph);
+        slot.setMinSize(20, 20);
+        slot.setPrefSize(20, 20);
+        slot.setMaxSize(20, 20);
+        slot.setAlignment(Pos.CENTER);
+        slot.getStyleClass().add("icon-slot");
+        return slot;
+    }
+
     private VBox buildHero() {
         Label eyebrow = new Label("TODAY'S SESSION");
         eyebrow.getStyleClass().add("eyebrow");
@@ -388,12 +405,12 @@ public final class StudyPlannerApp extends Application {
         focusDescription.setWrapText(true);
         focusDescription.getStyleClass().add("hero-description");
 
-        Circle track = new Circle(52);
+        Circle track = new Circle(PROGRESS_RING_RADIUS);
         track.getStyleClass().add("progress-ring-track");
         progressArc.setCenterX(0);
         progressArc.setCenterY(0);
-        progressArc.setRadiusX(52);
-        progressArc.setRadiusY(52);
+        progressArc.setRadiusX(PROGRESS_RING_RADIUS);
+        progressArc.setRadiusY(PROGRESS_RING_RADIUS);
         progressArc.setStartAngle(90);
         progressArc.setLength(0);
         progressArc.setType(ArcType.OPEN);
@@ -403,9 +420,9 @@ public final class StudyPlannerApp extends Application {
         StackPane.setAlignment(progressArc, Pos.CENTER);
         StackPane.setAlignment(progressRingValue, Pos.CENTER);
         progressRing.getChildren().setAll(track, progressArc, progressRingValue);
-        progressRing.setMinSize(112, 112);
-        progressRing.setPrefSize(112, 112);
-        progressRing.setMaxSize(112, 112);
+        progressRing.setMinSize(PROGRESS_RING_SIZE, PROGRESS_RING_SIZE);
+        progressRing.setPrefSize(PROGRESS_RING_SIZE, PROGRESS_RING_SIZE);
+        progressRing.setMaxSize(PROGRESS_RING_SIZE, PROGRESS_RING_SIZE);
         progressRing.getStyleClass().add("progress-ring");
 
         VBox copy = new VBox(7, eyebrow, title, subtitle, cycleLabel, focusDescription);
@@ -620,7 +637,10 @@ public final class StudyPlannerApp extends Application {
         Label subtitle = new Label("Shape the active study system without leaving the dashboard.");
         subtitle.setWrapText(true);
         subtitle.getStyleClass().add("manager-subtitle");
-        Button back = new Button("Back to dashboard");
+        Button back = new Button();
+        back.setGraphic(toolbarIcon("home"));
+        back.setAccessibleText("Back to dashboard");
+        back.setTooltip(new Tooltip("Back to dashboard"));
         back.getStyleClass().add("manager-back-button");
         back.setOnAction(event -> showDashboardPage());
 
@@ -634,12 +654,6 @@ public final class StudyPlannerApp extends Application {
             @Override public Cycle fromString(String value) { return Cycle.A; }
         });
         cycle.setValue(current.cycle());
-        cycle.setOnAction(event -> {
-            if (cycle.getValue() != null && cycle.getValue() != current.cycle()) {
-                current = current.withCycle(cycle.getValue());
-                showTemplatePage();
-            }
-        });
         cycle.setMaxWidth(Double.MAX_VALUE);
         cycle.getStyleClass().add("manager-field");
         ComboBox<WorkflowTemplate> workflow = new ComboBox<>();
@@ -656,7 +670,7 @@ public final class StudyPlannerApp extends Application {
         pause.setMaxWidth(Double.MAX_VALUE);
         pause.getStyleClass().add("manager-field");
         ComboBox<String> icon = new ComboBox<>();
-        icon.getItems().addAll("layout-dashboard", "calendar", "notebook", "book-2", "bookmark", "folder", "palette", "archive");
+        icon.getItems().addAll(TEMPLATE_ICON_IDS);
         icon.setValue(current.iconId());
         icon.setConverter(new StringConverter<>() {
             @Override public String toString(String value) {
@@ -673,6 +687,15 @@ public final class StudyPlannerApp extends Application {
         });
         icon.setMaxWidth(Double.MAX_VALUE);
         icon.getStyleClass().add("manager-field");
+        cycle.setOnAction(event -> {
+            if (cycle.getValue() != null && cycle.getValue() != current.cycle()) {
+                current = current.withCycle(cycle.getValue())
+                        .withIdentity(name.getText(), icon.getValue())
+                        .withWorkflowTemplate(workflow.getValue())
+                        .withPauseMinutes(pause.getValue());
+                showTemplatePage();
+            }
+        });
 
         GridPane form = new GridPane();
         form.setHgap(12);
@@ -728,23 +751,10 @@ public final class StudyPlannerApp extends Application {
             }
         });
 
-        Button create = new Button("Create from default");
-        create.getStyleClass().add("secondary-button");
-        create.setOnAction(event -> {
-            try {
-                current = rebuildTemplate(name.getText().isBlank() ? "New study template" : name.getText(),
-                        cycle.getValue(), workflow.getValue(), pause.getValue());
-                progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
-                persistSchedule();
-                persistProgress();
-                expandedItemId = null;
-                renderSession();
-                statusLabel.setText("New template created.");
-                showDashboardPage();
-            } catch (RuntimeException exception) {
-                showError("Unable to create template", exception.getMessage());
-            }
-        });
+        Button restore = new Button("Restore");
+        restore.getStyleClass().add("secondary-button");
+        restore.setTooltip(new Tooltip("Restore the last saved template"));
+        restore.setOnAction(event -> restoreLastSavedTemplate());
 
         Button remove = new Button("Delete template");
         remove.getStyleClass().add("danger-button");
@@ -765,7 +775,7 @@ public final class StudyPlannerApp extends Application {
             }
         });
 
-        HBox actions = new HBox(9, new Region(), create, save);
+        HBox actions = new HBox(9, restore, new Region(), save);
         HBox.setHgrow(actions.getChildren().get(1), Priority.ALWAYS);
         actions.setAlignment(Pos.CENTER_LEFT);
         actions.getStyleClass().add("manager-actions");
@@ -787,12 +797,8 @@ public final class StudyPlannerApp extends Application {
                 "Complete study system · " + current.totalBlocks() + " blocks", TablerIcon.icon(current.iconId()), true,
                 () -> showTemplatePage());
         addTemplateCard(templateLibrary, templateCards, "New template",
-                "Start a complete study system", TablerIcon.bookmark(), false,
-                () -> {
-                    current = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
-                    progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
-                    showTemplatePage();
-                });
+                "Start a complete study system", TablerIcon.icon("x"), false,
+                this::startNewTemplate);
         Label libraryTitle = new Label("TEMPLATE LIBRARY");
         libraryTitle.getStyleClass().add("manager-label");
         Label libraryHint = new Label("Templates contain their cycles, blocks, pauses and tasks. Select one to edit it below.");
@@ -843,6 +849,12 @@ public final class StudyPlannerApp extends Application {
         new ParallelTransition(fade, slide).play();
     }
 
+    private StackPane popupRoot(Node panel) {
+        StackPane root = new StackPane(panel);
+        root.getStyleClass().add("popup-root");
+        return root;
+    }
+
     private void showIdentityPopup(Node anchor, TextField name, ComboBox<Cycle> cycle,
                                    ComboBox<WorkflowTemplate> workflow, Spinner<Integer> pause,
                                    ComboBox<String> icon, Runnable refresh) {
@@ -877,7 +889,7 @@ public final class StudyPlannerApp extends Application {
                 new Label("Workflow"), workflowCopy, new Label("Pause"), pauseCopy, new Label("Icon"), iconCopy, actions);
         Popup popup = new Popup();
         popup.setAutoHide(true);
-        popup.getContent().add(panel);
+        popup.getContent().add(popupRoot(panel));
         cancel.setOnAction(event -> popup.hide());
         apply.setOnAction(event -> {
             name.setText(nameCopy.getText());
@@ -913,7 +925,7 @@ public final class StudyPlannerApp extends Application {
                 new Label("Focus minutes"), row.duration, new Label("Break after"), row.pause, actions);
         Popup popup = new Popup();
         popup.setAutoHide(true);
-        popup.getContent().add(panel);
+        popup.getContent().add(popupRoot(panel));
         cancel.setOnAction(event -> popup.hide());
         apply.setOnAction(event -> {
             row.refreshSummary();
@@ -946,7 +958,7 @@ public final class StudyPlannerApp extends Application {
                 new Label("Focus minutes"), draft.duration, new Label("Break after"), draft.pause, actions);
         Popup popup = new Popup();
         popup.setAutoHide(true);
-        popup.getContent().add(panel);
+        popup.getContent().add(popupRoot(panel));
         cancel.setOnAction(event -> popup.hide());
         add.setOnAction(event -> {
             draft.refreshSummary();
@@ -1074,20 +1086,23 @@ public final class StudyPlannerApp extends Application {
         GridPane.setHgrow(control, Priority.ALWAYS);
     }
 
-    private ScheduleTemplate rebuildTemplate(String name, Cycle cycle, WorkflowTemplate workflow, int pauseMinutes) {
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Template name cannot be blank");
+    private void startNewTemplate() {
+        current = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING)
+                .withIdentity("New study template", "x");
+        progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+        expandedItemId = null;
+        showTemplatePage();
+    }
+
+    private void restoreLastSavedTemplate() {
+        if (lastSavedTemplate == null) {
+            return;
         }
-        ScheduleTemplate base = DefaultScheduleFactory.create(cycle, workflow);
-        Map<DayOfWeek, List<StudyBlock>> days = new EnumMap<>(DayOfWeek.class);
-        for (DayOfWeek day : DayOfWeek.values()) {
-            List<StudyBlock> blocks = new ArrayList<>();
-            for (StudyBlock block : base.blocks(day)) {
-                blocks.add(new StudyBlock(block.order(), block.focus(), block.topic(), block.duration(), pauseMinutes));
-            }
-            days.put(day, blocks);
-        }
-        return new ScheduleTemplate(2, name, cycle, workflow, pauseMinutes, days);
+        current = lastSavedTemplate;
+        progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+        expandedItemId = null;
+        showTemplatePage();
+        statusLabel.setText("Last saved template restored.");
     }
 
     private HBox buildFooter() {
@@ -1285,7 +1300,11 @@ public final class StudyPlannerApp extends Application {
             tasks.getChildren().add(taskRow(item, task));
         }
         tasks.getStyleClass().add("task-list");
-        VBox detail = new VBox(10, chips, callout, tasks);
+        Separator separator = new Separator();
+        separator.getStyleClass().add("detail-separator");
+        VBox detailContent = new VBox(10, chips, callout, tasks);
+        detailContent.getStyleClass().add("detail-content");
+        VBox detail = new VBox(10, separator, detailContent);
         detail.getStyleClass().add("item-detail");
         detail.setVisible(false);
         detail.setManaged(false);
@@ -1359,8 +1378,8 @@ public final class StudyPlannerApp extends Application {
     private void progressRingArc(double ratio) {
         progressArc.setCenterX(0);
         progressArc.setCenterY(0);
-        progressArc.setRadiusX(52);
-        progressArc.setRadiusY(52);
+        progressArc.setRadiusX(PROGRESS_RING_RADIUS);
+        progressArc.setRadiusY(PROGRESS_RING_RADIUS);
         progressArc.setType(ArcType.OPEN);
         double target = -360 * Math.max(0, Math.min(1, ratio));
         Timeline timeline = new Timeline(new KeyFrame(Duration.millis(360),
@@ -1501,7 +1520,7 @@ public final class StudyPlannerApp extends Application {
             statusLabel.setText("Cycle " + cycle.label() + " is already active.");
             return;
         }
-        current = DefaultScheduleFactory.create(cycle, current.workflowTemplate());
+        current = current.withCycle(cycle);
         progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
         persistSchedule();
         persistProgress();
@@ -1524,6 +1543,7 @@ public final class StudyPlannerApp extends Application {
     private void persistSchedule() {
         try {
             service.save(schedulePath, current);
+            lastSavedTemplate = current;
         } catch (IOException | RuntimeException exception) {
             showError("Unable to save schedule", exception.getMessage());
         }
@@ -1540,6 +1560,7 @@ public final class StudyPlannerApp extends Application {
     private void reloadSchedule() {
         try {
             current = service.loadOrCreate(schedulePath);
+            lastSavedTemplate = current;
             progress = progressStore.loadOrEmpty(progressPath, current.cycle(), current.workflowTemplate());
             renderSession();
             statusLabel.setText("Schedule reloaded.");

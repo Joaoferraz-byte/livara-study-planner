@@ -116,6 +116,10 @@ public final class ScheduleTemplate {
         return withCycles(schemaVersion, newName, cycle, workflowTemplate, pauseMinutes, newIconId, blocksByCycle);
     }
 
+    public ScheduleTemplate withPauseMinutes(int newPauseMinutes) {
+        return withCycles(schemaVersion, name, cycle, workflowTemplate, newPauseMinutes, iconId, blocksByCycle);
+    }
+
     public ScheduleTemplate withWorkflowTemplate(WorkflowTemplate newWorkflowTemplate) {
         return withCycles(schemaVersion, name, cycle, newWorkflowTemplate, pauseMinutes, iconId, blocksByCycle);
     }

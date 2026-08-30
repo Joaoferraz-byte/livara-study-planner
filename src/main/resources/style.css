@@ -48,11 +48,13 @@
 
 .progress-ring {
     -fx-background-color: -fx-livara-surface-raised;
+    -fx-background-insets: 0;
     -fx-background-radius: 999px;
     -fx-border-color: -fx-livara-border-strong;
+    -fx-border-insets: 0;
     -fx-border-radius: 999px;
     -fx-border-width: 1px;
-    -fx-padding: 6px;
+    -fx-padding: 0;
 }
 
 .progress-ring-track {
@@ -140,6 +142,9 @@
 }
 
 .menu-button {
+    -fx-alignment: CENTER;
+    -fx-content-display: GRAPHIC_ONLY;
+    -fx-graphic-text-gap: 0;
     -fx-min-width: 28px;
     -fx-pref-width: 28px;
     -fx-max-width: 28px;
@@ -158,6 +163,12 @@
     -fx-stroke-width: 2px;
     -fx-stroke-line-cap: round;
     -fx-stroke-line-join: round;
+}
+
+.icon-slot {
+    -fx-alignment: CENTER;
+    -fx-background-color: transparent;
+    -fx-padding: 0;
 }
 
 .menu-icon {
@@ -446,9 +457,18 @@
 }
 
 .item-detail {
-    -fx-border-color: -fx-livara-border transparent transparent transparent;
-    -fx-border-width: 1px 0 0 0;
-    -fx-padding: 10px 0 0 30px;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 10px 0 0 0;
+}
+
+.detail-content {
+    -fx-padding: 0 0 0 32px;
+}
+
+.detail-separator {
+    -fx-padding: 0;
+    -fx-max-width: infinity;
 }
 
 .detail-chips {
