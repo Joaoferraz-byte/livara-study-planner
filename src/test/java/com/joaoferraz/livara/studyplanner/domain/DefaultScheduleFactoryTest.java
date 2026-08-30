@@ -36,16 +36,13 @@ class DefaultScheduleFactoryTest {
     }
 
     @Test
-    void newDraftIsValidButDoesNotCloneTheSeededTemplate() {
-        ScheduleTemplate seeded = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
+    void newDraftStartsWithoutCyclesOrBlocks() {
         ScheduleTemplate draft = DefaultScheduleFactory.createDraft(Cycle.A);
 
-        assertEquals(8, draft.totalBlocks());
-        assertTrue(ScheduleValidator.validate(draft).isEmpty());
-        assertTrue(draft.sequence().stream().allMatch(block -> block.topic().startsWith("New ")));
-        assertTrue(draft.sequence().stream().noneMatch(block ->
-                seeded.sequence().stream().map(StudyBlock::topic).toList().contains(block.topic())));
-        assertTrue(ScheduleValidator.validate(DefaultScheduleFactory.createDraft(Cycle.B)).isEmpty());
+        assertTrue(draft.createdCycles().isEmpty());
+        assertEquals(0, draft.totalBlocks());
+        assertTrue(draft.sequence().isEmpty());
+        assertTrue(ScheduleValidator.validate(draft).contains("The template must contain at least one study block"));
     }
 
     @Test

@@ -45,6 +45,9 @@ public final class ScheduleStore {
             EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
             for (Cycle value : Cycle.values()) {
                 Object rawDays = cycleMap.get(value.name());
+                if (rawDays == null) {
+                    continue;
+                }
                 if (!(rawDays instanceof Map<?, ?> dayMap)) {
                     throw new IOException("Each cycle must contain a days object");
                 }
@@ -105,15 +108,20 @@ public final class ScheduleStore {
         field(json, "workflowTemplate", quote(template.workflowTemplate().id()), true);
         field(json, "pauseMinutes", Integer.toString(template.pauseMinutes()), false);
         field(json, "iconId", quote(template.iconId()), true);
-        json.append("  \"cycles\": {\n");
-        Cycle[] cycles = Cycle.values();
-        for (int cycleIndex = 0; cycleIndex < cycles.length; cycleIndex++) {
-            Cycle value = cycles[cycleIndex];
-            json.append("    ").append(quote(value.name())).append(": {\n");
-            appendDays(json, template.blocks(value));
-            json.append("    }").append(cycleIndex + 1 == cycles.length ? "\n" : ",\n");
+        List<Cycle> cycles = template.createdCycles();
+        json.append("  \"cycles\": {");
+        if (!cycles.isEmpty()) {
+            json.append("\n");
+            for (int cycleIndex = 0; cycleIndex < cycles.size(); cycleIndex++) {
+                Cycle value = cycles.get(cycleIndex);
+                json.append("    ").append(quote(value.name())).append(": {\n");
+                appendDays(json, template.blocks(value));
+                json.append("    }").append(cycleIndex + 1 == cycles.size() ? "\n" : ",\n");
+            }
+            json.append("  }\n");
+        } else {
+            json.append("}\n");
         }
-        json.append("  }\n");
         json.append("}");
         return json.toString();
     }

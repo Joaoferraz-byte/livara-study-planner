@@ -29,12 +29,16 @@ public final class DefaultScheduleFactory {
      * sequence, so the editor visibly belongs to the newly selected template.
      */
     public static ScheduleTemplate createDraft(Cycle cycle) {
-        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
-        for (Cycle value : Cycle.values()) {
-            cycles.put(value, project(value, draftSequence(value)));
-        }
         return ScheduleTemplate.withCycles(2, "New study template", cycle,
-                WorkflowTemplate.MARKET_PROGRAMMING, 15, cycles);
+                WorkflowTemplate.MARKET_PROGRAMMING, 15, Map.of());
+    }
+
+    public static Map<DayOfWeek, List<StudyBlock>> emptyCycle() {
+        EnumMap<DayOfWeek, List<StudyBlock>> days = new EnumMap<>(DayOfWeek.class);
+        for (DayOfWeek day : DayOfWeek.values()) {
+            days.put(day, List.of());
+        }
+        return days;
     }
 
     private static Map<DayOfWeek, List<StudyBlock>> project(Cycle cycle, WorkflowTemplate workflowTemplate) {

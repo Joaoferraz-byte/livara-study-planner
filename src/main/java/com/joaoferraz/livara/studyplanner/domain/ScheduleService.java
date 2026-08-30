@@ -58,11 +58,10 @@ public final class ScheduleService {
             StudyBlock block = sequence.get(index);
             normalized.add(new StudyBlock(index + 1, block.focus(), block.topic(), block.duration(), pauseMinutes));
         }
-        Map<DayOfWeek, List<StudyBlock>> projected = projectSequence(normalized, current.blocks(current.cycle()));
+        Map<DayOfWeek, List<StudyBlock>> projected = projectSequence(normalized, current.blocks(activeCycle));
         EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
-        for (Cycle value : Cycle.values()) {
-            cycles.put(value, value == activeCycle ? projected : current.blocks(value));
-        }
+        cycles.putAll(current.blocksByCycle());
+        cycles.put(activeCycle, projected);
         ScheduleTemplate edited = ScheduleTemplate.withCycles(2, name, activeCycle, workflow, pauseMinutes,
                 iconId, cycles);
         requireValid(edited);

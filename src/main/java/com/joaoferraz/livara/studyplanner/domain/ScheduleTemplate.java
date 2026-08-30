@@ -61,8 +61,9 @@ public final class ScheduleTemplate {
         }
         Objects.requireNonNull(blocksByCycle, "blocksByCycle");
         EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> copy = new EnumMap<>(Cycle.class);
-        for (Cycle value : Cycle.values()) {
-            Map<DayOfWeek, List<StudyBlock>> source = blocksByCycle.getOrDefault(value, Map.of());
+        for (Map.Entry<Cycle, Map<DayOfWeek, List<StudyBlock>>> entry : blocksByCycle.entrySet()) {
+            Cycle value = Objects.requireNonNull(entry.getKey(), "cycle");
+            Map<DayOfWeek, List<StudyBlock>> source = Objects.requireNonNull(entry.getValue(), "cycle days");
             EnumMap<DayOfWeek, List<StudyBlock>> dayCopy = new EnumMap<>(DayOfWeek.class);
             for (DayOfWeek day : DayOfWeek.values()) {
                 dayCopy.put(day, Collections.unmodifiableList(new ArrayList<>(source.getOrDefault(day, List.of()))));
@@ -95,7 +96,9 @@ public final class ScheduleTemplate {
 
     /** Returns the active cycle projection kept for existing callers. */
     public Map<DayOfWeek, List<StudyBlock>> blocksByDay() { return blocks(cycle); }
-    public Map<DayOfWeek, List<StudyBlock>> blocks(Cycle value) { return blocksByCycle.get(value); }
+    public Map<DayOfWeek, List<StudyBlock>> blocks(Cycle value) {
+        return blocksByCycle.getOrDefault(Objects.requireNonNull(value, "cycle"), Map.of());
+    }
     public List<StudyBlock> blocks(DayOfWeek day) { return blocks(cycle, day); }
     public List<StudyBlock> blocks(Cycle value, DayOfWeek day) {
         return blocksByCycle.getOrDefault(value, Map.of()).getOrDefault(day, List.of());
@@ -105,11 +108,46 @@ public final class ScheduleTemplate {
         return blocks(value).values().stream().flatMap(List::stream).toList();
     }
     public Map<Cycle, Map<DayOfWeek, List<StudyBlock>>> blocksByCycle() { return blocksByCycle; }
+    public List<Cycle> createdCycles() { return List.copyOf(blocksByCycle.keySet()); }
+    public boolean hasCycle(Cycle value) { return blocksByCycle.containsKey(value); }
     public int totalBlocks() { return totalBlocks(cycle); }
     public int totalBlocks(Cycle value) { return blocks(value).values().stream().mapToInt(List::size).sum(); }
 
     public ScheduleTemplate withCycle(Cycle newCycle) {
         return withCycles(schemaVersion, name, newCycle, workflowTemplate, pauseMinutes, iconId, blocksByCycle);
+    }
+
+    public ScheduleTemplate withAddedCycle(Cycle newCycle, Map<DayOfWeek, List<StudyBlock>> newBlocks) {
+        Objects.requireNonNull(newCycle, "newCycle");
+        Objects.requireNonNull(newBlocks, "newBlocks");
+        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> updated = new EnumMap<>(Cycle.class);
+        updated.putAll(blocksByCycle);
+        updated.put(newCycle, newBlocks);
+        return withCycles(schemaVersion, name, newCycle, workflowTemplate, pauseMinutes, iconId, updated);
+    }
+
+    public ScheduleTemplate withUpdatedCycle(Cycle updatedCycle, Map<DayOfWeek, List<StudyBlock>> updatedBlocks) {
+        Objects.requireNonNull(updatedCycle, "updatedCycle");
+        Objects.requireNonNull(updatedBlocks, "updatedBlocks");
+        if (!hasCycle(updatedCycle)) {
+            throw new IllegalArgumentException("Cycle does not exist: " + updatedCycle);
+        }
+        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> updated = new EnumMap<>(Cycle.class);
+        updated.putAll(blocksByCycle);
+        updated.put(updatedCycle, updatedBlocks);
+        return withCycles(schemaVersion, name, updatedCycle, workflowTemplate, pauseMinutes, iconId, updated);
+    }
+
+    public ScheduleTemplate withoutCycle(Cycle removedCycle) {
+        Objects.requireNonNull(removedCycle, "removedCycle");
+        if (!hasCycle(removedCycle)) {
+            throw new IllegalArgumentException("Cycle does not exist: " + removedCycle);
+        }
+        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> updated = new EnumMap<>(Cycle.class);
+        updated.putAll(blocksByCycle);
+        updated.remove(removedCycle);
+        Cycle nextActive = updated.containsKey(cycle) ? cycle : updated.keySet().stream().findFirst().orElse(cycle);
+        return withCycles(schemaVersion, name, nextActive, workflowTemplate, pauseMinutes, iconId, updated);
     }
 
     public ScheduleTemplate withIdentity(String newName, String newIconId) {
