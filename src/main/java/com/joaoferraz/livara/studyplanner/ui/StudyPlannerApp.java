@@ -810,8 +810,7 @@ public final class StudyPlannerApp extends Application {
         return List.of(
                 new StudyTask("study", "Study", "Work through the core material with deliberate focus."),
                 new StudyTask("annotation", "Annotation", "Capture the essential ideas, questions, and connections."),
-                new StudyTask("practice", "Practice", "Work through one representative problem or implementation."),
-                new StudyTask("apply", "Apply", "Record one result, question, or decision for the next session."));
+                new StudyTask("practice", "Practice", "Work through one representative problem or implementation and record the result."));
     }
 
     private static String taskId(StudySessionItem item, StudyTask task) {
