@@ -54,11 +54,23 @@ public final class ProgressState {
 
     public ProgressState toggle(String itemId) {
         Objects.requireNonNull(itemId, "itemId");
+        return withCompleted(itemId, !isCompleted(itemId));
+    }
+
+    public ProgressState withCompleted(String itemId, boolean completed) {
+        Objects.requireNonNull(itemId, "itemId");
         LinkedHashSet<String> updated = new LinkedHashSet<>(completedItems);
-        if (!updated.add(itemId)) {
+        if (completed) {
+            updated.add(itemId);
+        } else {
             updated.remove(itemId);
         }
         return new ProgressState(schemaVersion, cycle, workflowTemplate, updated, activeItemIndex);
+    }
+
+    public ProgressState withCompletedItems(Set<String> itemIds) {
+        return new ProgressState(schemaVersion, cycle, workflowTemplate,
+                Objects.requireNonNull(itemIds, "itemIds"), activeItemIndex);
     }
 
     public ProgressState withActiveItemIndex(int itemIndex) {
