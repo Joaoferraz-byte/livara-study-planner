@@ -30,6 +30,27 @@ class ScheduleServiceTest {
     }
 
     @Test
+    void editingIntoAnotherCycleProjectsTheSequenceIntoThatCycle() {
+        ScheduleTemplate defaults = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
+        ScheduleTemplate targetCycle = DefaultScheduleFactory.create(Cycle.B, WorkflowTemplate.MARKET_PROGRAMMING);
+
+        ScheduleTemplate edited = new ScheduleService(new ScheduleStore()).editTemplate(
+                defaults,
+                "New study template",
+                Cycle.B,
+                WorkflowTemplate.MARKET_PROGRAMMING,
+                15,
+                "x",
+                targetCycle.sequence());
+
+        assertEquals(Cycle.B, edited.cycle());
+        assertEquals(defaults.sequence().size(), edited.sequence().size());
+        assertEquals(targetCycle.sequence().stream().map(StudyBlock::topic).toList(),
+                edited.sequence().stream().map(StudyBlock::topic).toList());
+        assertEquals(defaults.blocks(Cycle.A), edited.blocks(Cycle.A));
+    }
+
+    @Test
     void withIdentityPreservesCyclesWhileChangingOnlyPresentationIdentity() {
         ScheduleTemplate defaults = DefaultScheduleFactory.create(Cycle.B, WorkflowTemplate.MARKET_PROGRAMMING);
 

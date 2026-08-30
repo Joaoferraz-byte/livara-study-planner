@@ -10,6 +10,8 @@ import com.joaoferraz.livara.studyplanner.domain.StudyBlock;
 import com.joaoferraz.livara.studyplanner.domain.WorkflowTemplate;
 import com.joaoferraz.livara.studyplanner.io.ProgressStore;
 import com.joaoferraz.livara.studyplanner.io.ScheduleStore;
+import com.joaoferraz.livara.studyplanner.io.TemplateLibraryStore;
+import com.joaoferraz.livara.studyplanner.domain.TemplateLibrary;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -48,8 +50,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.Arc;
-import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.SVGPath;
 import javafx.scene.paint.Color;
@@ -80,6 +80,7 @@ public final class StudyPlannerApp extends Application {
     private static final double WIDE_BREAKPOINT = 1040;
     private static final double PROGRESS_RING_SIZE = 112;
     private static final double PROGRESS_RING_RADIUS = 49;
+    private static final double PROGRESS_RING_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RING_RADIUS;
     private static final List<String> VAULT_FOLDERS = List.of(
             "Black Box", "Source Notes", "Projects", "Daily Notes", "Xournal++", "References");
     private static final List<String> TEMPLATE_ICON_IDS = List.of(
@@ -89,6 +90,7 @@ public final class StudyPlannerApp extends Application {
 
     private final ScheduleStore store = new ScheduleStore();
     private final ScheduleService service = new ScheduleService(store);
+    private final TemplateLibraryStore libraryStore = new TemplateLibraryStore();
     private final ProgressStore progressStore = new ProgressStore();
     private final VBox sessionList = new VBox(8);
     private final GridPane dashboardGrid = new GridPane();
@@ -109,7 +111,7 @@ public final class StudyPlannerApp extends Application {
     private final VBox summaryPanel = new VBox(10);
     private final VBox hero = new VBox(8);
     private final StackPane progressRing = new StackPane();
-    private final Arc progressArc = new Arc();
+    private final Circle progressArc = new Circle(PROGRESS_RING_RADIUS);
     private final Label progressRingValue = new Label();
     private final MenuButton menu = new MenuButton("Menu");
     private final StackPane mainViewHost = new StackPane();
@@ -119,7 +121,8 @@ public final class StudyPlannerApp extends Application {
     private Stage primaryStage;
     private boolean compactLayout;
     private ScheduleTemplate current;
-    private ScheduleTemplate lastSavedTemplate;
+    private TemplateLibrary library;
+    private TemplateLibrary lastSavedLibrary;
 
     private static final class BlockEditorRow {
         private int order;
@@ -238,6 +241,7 @@ public final class StudyPlannerApp extends Application {
     private boolean animateSessionRefresh;
     private Path schedulePath;
     private Path progressPath;
+    private boolean usingLegacyProgressPath;
 
     public static void launchWithPath(Path path) {
         requestedPath = Objects.requireNonNull(path, "path").toAbsolutePath();
@@ -250,14 +254,31 @@ public final class StudyPlannerApp extends Application {
         schedulePath = requestedPath == null ? defaultPath() : requestedPath;
         progressPath = schedulePath.resolveSibling(schedulePath.getFileName() + ".progress.properties");
         try {
-            current = service.loadOrCreate(schedulePath);
-            lastSavedTemplate = current;
-            progress = progressStore.loadOrEmpty(progressPath, current.cycle(), current.workflowTemplate());
+            if (Files.exists(schedulePath)) {
+                library = libraryStore.load(schedulePath);
+            } else {
+                library = TemplateLibrary.single("default",
+                        DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING));
+            }
+            current = library.selected();
+            List<String> errors = service.validate(current);
+            if (!errors.isEmpty()) {
+                throw new IllegalArgumentException(String.join("\\n", errors));
+            }
+            usingLegacyProgressPath = isLegacyDefaultLibrary();
+            activateSelectedTemplate();
+            lastSavedLibrary = library;
+            if (!Files.exists(schedulePath)) {
+                persistSchedule();
+            }
         } catch (IOException | RuntimeException exception) {
             showError("Unable to load schedule", exception.getMessage());
-            current = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
-            lastSavedTemplate = current;
-            progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+            library = TemplateLibrary.single("default",
+                    DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING));
+            current = library.selected();
+            usingLegacyProgressPath = true;
+            activateSelectedTemplate();
+            lastSavedLibrary = library;
         }
 
         StackPane sceneRoot = new StackPane();
@@ -409,11 +430,10 @@ public final class StudyPlannerApp extends Application {
         track.getStyleClass().add("progress-ring-track");
         progressArc.setCenterX(0);
         progressArc.setCenterY(0);
-        progressArc.setRadiusX(PROGRESS_RING_RADIUS);
-        progressArc.setRadiusY(PROGRESS_RING_RADIUS);
-        progressArc.setStartAngle(90);
-        progressArc.setLength(0);
-        progressArc.setType(ArcType.OPEN);
+        progressArc.setRadius(PROGRESS_RING_RADIUS);
+        progressArc.getStrokeDashArray().setAll(PROGRESS_RING_CIRCUMFERENCE,
+                PROGRESS_RING_CIRCUMFERENCE);
+        progressArc.setStrokeDashOffset(PROGRESS_RING_CIRCUMFERENCE);
         progressArc.getStyleClass().add("progress-ring-arc");
         progressRingValue.getStyleClass().add("progress-ring-value");
         StackPane.setAlignment(track, Pos.CENTER);
@@ -630,6 +650,7 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void showTemplatePage() {
+        current = library.selected();
         Label eyebrow = new Label("PLANNER MANAGEMENT");
         eyebrow.getStyleClass().add("manager-eyebrow");
         Label title = new Label("Templates & cycles");
@@ -637,13 +658,6 @@ public final class StudyPlannerApp extends Application {
         Label subtitle = new Label("Shape the active study system without leaving the dashboard.");
         subtitle.setWrapText(true);
         subtitle.getStyleClass().add("manager-subtitle");
-        Button back = new Button();
-        back.setGraphic(toolbarIcon("home"));
-        back.setAccessibleText("Back to dashboard");
-        back.setTooltip(new Tooltip("Back to dashboard"));
-        back.getStyleClass().add("manager-back-button");
-        back.setOnAction(event -> showDashboardPage());
-
         TextField name = new TextField(current.name());
         name.setPromptText("Template name");
         name.getStyleClass().add("manager-field");
@@ -687,16 +701,6 @@ public final class StudyPlannerApp extends Application {
         });
         icon.setMaxWidth(Double.MAX_VALUE);
         icon.getStyleClass().add("manager-field");
-        cycle.setOnAction(event -> {
-            if (cycle.getValue() != null && cycle.getValue() != current.cycle()) {
-                current = current.withCycle(cycle.getValue())
-                        .withIdentity(name.getText(), icon.getValue())
-                        .withWorkflowTemplate(workflow.getValue())
-                        .withPauseMinutes(pause.getValue());
-                showTemplatePage();
-            }
-        });
-
         GridPane form = new GridPane();
         form.setHgap(12);
         form.setVgap(10);
@@ -738,7 +742,9 @@ public final class StudyPlannerApp extends Application {
         save.getStyleClass().add("primary-button");
         save.setOnAction(event -> {
             try {
-                current = rebuildEditedTemplate(name.getText(), cycle.getValue(), workflow.getValue(), pause.getValue(), icon.getValue(), blockRows);
+                ScheduleTemplate edited = rebuildEditedTemplate(name.getText(), cycle.getValue(), workflow.getValue(), pause.getValue(), icon.getValue(), blockRows);
+                library = library.updateSelected(edited);
+                current = library.selected();
                 progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
                 persistSchedule();
                 persistProgress();
@@ -760,17 +766,22 @@ public final class StudyPlannerApp extends Application {
         remove.getStyleClass().add("danger-button");
         remove.setOnAction(event -> {
             try {
-                Files.deleteIfExists(schedulePath);
-                Files.deleteIfExists(progressPath);
-                current = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
-                progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+                String removedId = library.selectedTemplateId();
+                if (library.entries().size() == 1) {
+                    ScheduleTemplate fallback = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
+                    library = TemplateLibrary.single("default", fallback);
+                    usingLegacyProgressPath = true;
+                } else {
+                    library = library.remove(removedId);
+                }
+                activateSelectedTemplate();
                 persistSchedule();
                 persistProgress();
                 expandedItemId = null;
                 renderSession();
-                statusLabel.setText("Template deleted; default restored.");
+                statusLabel.setText("Template deleted; active template updated.");
                 showDashboardPage();
-            } catch (IOException | RuntimeException exception) {
+            } catch (RuntimeException exception) {
                 showError("Unable to delete template", exception.getMessage());
             }
         });
@@ -780,7 +791,7 @@ public final class StudyPlannerApp extends Application {
         actions.setAlignment(Pos.CENTER_LEFT);
         actions.getStyleClass().add("manager-actions");
         VBox intro = new VBox(4, eyebrow, title, subtitle);
-        HBox pageHeader = new HBox(16, back, intro);
+        HBox pageHeader = new HBox(16, intro);
         pageHeader.setAlignment(Pos.TOP_LEFT);
         HBox.setHgrow(intro, Priority.ALWAYS);
         Label active = new Label("ACTIVE TEMPLATE\n" + current.name());
@@ -793,11 +804,15 @@ public final class StudyPlannerApp extends Application {
         templateLibrary.setPrefWrapLength(760);
         templateLibrary.getStyleClass().add("template-library");
         List<VBox> templateCards = new ArrayList<>();
-        addTemplateCard(templateLibrary, templateCards, current.name(),
-                "Complete study system · " + current.totalBlocks() + " blocks", TablerIcon.icon(current.iconId()), true,
-                () -> showTemplatePage());
+        for (TemplateLibrary.Entry entry : library.entries()) {
+            ScheduleTemplate schedule = entry.schedule();
+            addTemplateCard(templateLibrary, templateCards, schedule.name(),
+                    "Complete study system · " + schedule.totalBlocks() + " blocks",
+                    TablerIcon.icon(schedule.iconId()), entry.id().equals(library.selectedTemplateId()),
+                    () -> selectTemplate(entry.id()));
+        }
         addTemplateCard(templateLibrary, templateCards, "New template",
-                "Start a complete study system", TablerIcon.icon("x"), false,
+                "Create and edit a new study system", TablerIcon.icon("plus"), false,
                 this::startNewTemplate);
         Label libraryTitle = new Label("TEMPLATE LIBRARY");
         libraryTitle.getStyleClass().add("manager-label");
@@ -852,7 +867,20 @@ public final class StudyPlannerApp extends Application {
     private StackPane popupRoot(Node panel) {
         StackPane root = new StackPane(panel);
         root.getStyleClass().add("popup-root");
+        root.setPadding(Insets.EMPTY);
         return root;
+    }
+
+    private void stylePopupScene(Popup popup) {
+        if (popup.getScene() == null) {
+            return;
+        }
+        popup.getScene().setFill(Color.TRANSPARENT);
+        String stylesheet = Objects.requireNonNull(getClass().getResource("/style.css"),
+                "style.css resource is missing").toExternalForm();
+        if (!popup.getScene().getStylesheets().contains(stylesheet)) {
+            popup.getScene().getStylesheets().add(stylesheet);
+        }
     }
 
     private void showIdentityPopup(Node anchor, TextField name, ComboBox<Cycle> cycle,
@@ -901,7 +929,7 @@ public final class StudyPlannerApp extends Application {
             popup.hide();
         });
         popup.setOnShown(event -> {
-            if (popup.getScene() != null) popup.getScene().setFill(Color.TRANSPARENT);
+            stylePopupScene(popup);
             javafx.geometry.Point2D point = anchor.localToScreen(0, anchor.getLayoutBounds().getHeight() + 8);
             popup.setX(point.getX());
             popup.setY(point.getY());
@@ -1028,43 +1056,9 @@ public final class StudyPlannerApp extends Application {
         int order = 1;
         for (BlockEditorRow row : rows) {
             row.setOrder(order);
-            StudyBlock edited = row.toBlock(order++);
-            sequence.add(new StudyBlock(edited.order(), edited.focus(), edited.topic(), edited.duration(), pauseMinutes));
+            sequence.add(row.toBlock(order++));
         }
-        Map<DayOfWeek, List<StudyBlock>> days = projectSequence(sequence, current.blocks(current.cycle()));
-        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
-        for (Cycle value : Cycle.values()) {
-            cycles.put(value, value == current.cycle() ? days : current.blocks(value));
-        }
-        ScheduleTemplate edited = ScheduleTemplate.withCycles(2, name, cycle, workflow, pauseMinutes, iconId, cycles);
-        List<String> errors = service.validate(edited);
-        if (!errors.isEmpty()) {
-            throw new IllegalArgumentException(String.join("\\n", errors));
-        }
-        return edited;
-    }
-
-    private Map<DayOfWeek, List<StudyBlock>> projectSequence(List<StudyBlock> sequence,
-                                                               Map<DayOfWeek, List<StudyBlock>> previous) {
-        EnumMap<DayOfWeek, List<StudyBlock>> result = new EnumMap<>(DayOfWeek.class);
-        int cursor = 0;
-        for (DayOfWeek day : DayOfWeek.values()) {
-            List<StudyBlock> blocks = new ArrayList<>();
-            int slots = previous.getOrDefault(day, List.of()).size();
-            for (int index = 0; index < slots && cursor < sequence.size(); index++) {
-                StudyBlock source = sequence.get(cursor++);
-                blocks.add(new StudyBlock(blocks.size() + 1, source.focus(), source.topic(), source.duration(), source.breakAfterMinutes()));
-            }
-            result.put(day, blocks);
-        }
-        List<StudyBlock> overflow = result.get(DayOfWeek.SATURDAY);
-        while (cursor < sequence.size()) {
-            StudyBlock source = sequence.get(cursor++);
-            overflow = new ArrayList<>(overflow);
-            overflow.add(new StudyBlock(overflow.size() + 1, source.focus(), source.topic(), source.duration(), source.breakAfterMinutes()));
-            result.put(DayOfWeek.SATURDAY, overflow);
-        }
-        return result;
+        return service.editTemplate(current, name, cycle, workflow, pauseMinutes, iconId, sequence);
     }
 
     private void showDashboardPage() {
@@ -1087,19 +1081,35 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void startNewTemplate() {
-        current = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING)
+        ScheduleTemplate draft = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING)
                 .withIdentity("New study template", "x");
-        progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+        library = library.add(draft);
+        usingLegacyProgressPath = false;
+        activateSelectedTemplate();
+        persistSchedule();
+        persistProgress();
         expandedItemId = null;
         showTemplatePage();
     }
 
+    private void selectTemplate(String id) {
+        try {
+            library = library.select(id);
+            activateSelectedTemplate();
+            persistSchedule();
+            renderSession();
+            showTemplatePage();
+        } catch (RuntimeException exception) {
+            showError("Unable to select template", exception.getMessage());
+        }
+    }
+
     private void restoreLastSavedTemplate() {
-        if (lastSavedTemplate == null) {
+        if (lastSavedLibrary == null) {
             return;
         }
-        current = lastSavedTemplate;
-        progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+        library = lastSavedLibrary;
+        activateSelectedTemplate();
         expandedItemId = null;
         showTemplatePage();
         statusLabel.setText("Last saved template restored.");
@@ -1376,14 +1386,10 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void progressRingArc(double ratio) {
-        progressArc.setCenterX(0);
-        progressArc.setCenterY(0);
-        progressArc.setRadiusX(PROGRESS_RING_RADIUS);
-        progressArc.setRadiusY(PROGRESS_RING_RADIUS);
-        progressArc.setType(ArcType.OPEN);
-        double target = -360 * Math.max(0, Math.min(1, ratio));
+        double clamped = Math.max(0, Math.min(1, ratio));
+        double targetOffset = PROGRESS_RING_CIRCUMFERENCE * (1 - clamped);
         Timeline timeline = new Timeline(new KeyFrame(Duration.millis(360),
-                new KeyValue(progressArc.lengthProperty(), target, Interpolator.EASE_BOTH)));
+                new KeyValue(progressArc.strokeDashOffsetProperty(), targetOffset, Interpolator.EASE_BOTH)));
         timeline.play();
     }
 
@@ -1520,8 +1526,8 @@ public final class StudyPlannerApp extends Application {
             statusLabel.setText("Cycle " + cycle.label() + " is already active.");
             return;
         }
-        current = current.withCycle(cycle);
-        progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+        library = library.updateSelected(current.withCycle(cycle));
+        activateSelectedTemplate();
         persistSchedule();
         persistProgress();
         renderSession();
@@ -1529,8 +1535,9 @@ public final class StudyPlannerApp extends Application {
 
     private void advanceCycleAutomatically() {
         try {
-            current = service.advanceCycle(current);
-            progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+            ScheduleTemplate advanced = service.advanceCycle(current);
+            library = library.updateSelected(advanced);
+            activateSelectedTemplate();
             persistSchedule();
             persistProgress();
             renderSession();
@@ -1540,12 +1547,38 @@ public final class StudyPlannerApp extends Application {
         }
     }
 
+    private boolean isLegacyDefaultLibrary() {
+        return library.entries().size() == 1 && library.selectedTemplateId().equals("default");
+    }
+
+    private Path legacyProgressPath() {
+        return schedulePath.resolveSibling(schedulePath.getFileName() + ".progress.properties");
+    }
+
+    private Path progressPathFor(String templateId) {
+        if (usingLegacyProgressPath && templateId.equals("default")) {
+            return legacyProgressPath();
+        }
+        return schedulePath.resolveSibling(schedulePath.getFileName() + "." + templateId + ".progress.properties");
+    }
+
+    private void activateSelectedTemplate() {
+        current = library.selected();
+        progressPath = progressPathFor(library.selectedTemplateId());
+        try {
+            progress = progressStore.loadOrEmpty(progressPath, current.cycle(), current.workflowTemplate());
+        } catch (IOException | RuntimeException exception) {
+            progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+            statusLabel.setText("Progress reset for the selected template: " + exception.getMessage());
+        }
+    }
+
     private void persistSchedule() {
         try {
-            service.save(schedulePath, current);
-            lastSavedTemplate = current;
+            libraryStore.save(schedulePath, library);
+            lastSavedLibrary = library;
         } catch (IOException | RuntimeException exception) {
-            showError("Unable to save schedule", exception.getMessage());
+            showError("Unable to save template library", exception.getMessage());
         }
     }
 
@@ -1559,13 +1592,15 @@ public final class StudyPlannerApp extends Application {
 
     private void reloadSchedule() {
         try {
-            current = service.loadOrCreate(schedulePath);
-            lastSavedTemplate = current;
-            progress = progressStore.loadOrEmpty(progressPath, current.cycle(), current.workflowTemplate());
+            library = libraryStore.load(schedulePath);
+            current = library.selected();
+            usingLegacyProgressPath = isLegacyDefaultLibrary();
+            activateSelectedTemplate();
+            lastSavedLibrary = library;
             renderSession();
-            statusLabel.setText("Schedule reloaded.");
+            statusLabel.setText("Template library reloaded.");
         } catch (IOException | RuntimeException exception) {
-            showError("Unable to reload schedule", exception.getMessage());
+            showError("Unable to reload template library", exception.getMessage());
         }
     }
 
@@ -1645,8 +1680,21 @@ public final class StudyPlannerApp extends Application {
         }
     }
 
+    private void styleDialogScene(Alert alert) {
+        if (alert.getDialogPane().getScene() == null) {
+            return;
+        }
+        String stylesheet = Objects.requireNonNull(getClass().getResource("/style.css"),
+                "style.css resource is missing").toExternalForm();
+        if (!alert.getDialogPane().getScene().getStylesheets().contains(stylesheet)) {
+            alert.getDialogPane().getScene().getStylesheets().add(stylesheet);
+        }
+        alert.getDialogPane().getScene().setFill(Color.TRANSPARENT);
+    }
+
     private void showInfo(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION, message);
+        styleDialogScene(alert);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.showAndWait();
@@ -1654,6 +1702,7 @@ public final class StudyPlannerApp extends Application {
 
     private void showError(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR, message == null ? "Unknown error" : message);
+        styleDialogScene(alert);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.showAndWait();

@@ -650,7 +650,6 @@
 }
 
 .progress-bar {
-    -fx-accent: -fx-livara-accent;
     -fx-pref-height: 7px;
     -fx-max-height: 7px;
 }
@@ -719,8 +718,11 @@
     -fx-text-fill: -fx-livara-faint;
 }
 
-.context-menu, .menu-item, .combo-box-popup .list-view {
+.context-menu, .menu-item, .combo-box-popup,
+.combo-box-popup .list-view, .combo-box-popup .virtual-flow,
+.combo-box-popup .viewport {
     -fx-background-color: -fx-livara-surface;
+    -fx-background-insets: 0;
 }
 
 .context-menu {
@@ -887,9 +889,11 @@
 }
 .context-menu .corner,
 .combo-box-popup .corner,
+.combo-box-popup .background,
 .context-menu .background {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
+    -fx-background-radius: 14px;
 }
 .context-menu .menu-item:focused,
 .context-menu .menu-item:hover {
@@ -1056,7 +1060,10 @@
 .popup-root {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
-    -fx-padding: 1px;
+    -fx-background-radius: 14px;
+    -fx-border-color: transparent;
+    -fx-border-insets: 0;
+    -fx-padding: 0;
 }
 .editor-popup {
     -fx-background-color: -fx-livara-surface-raised;
