@@ -335,6 +335,7 @@
 
 .session-header {
     -fx-background-color: transparent;
+    -fx-padding: 0 0 11px 0;
 }
 
 .item-check {
@@ -538,8 +539,10 @@
 }
 
 .duration-chip {
-    -fx-background-color: -fx-livara-accent;
+    -fx-background-color: -fx-livara-border-strong;
     -fx-background-radius: 999px;
+    -fx-border-color: -fx-livara-border-strong;
+    -fx-border-radius: 999px;
     -fx-padding: 5px 8px;
     -fx-font-size: 10px;
     -fx-font-weight: bold;
@@ -550,6 +553,9 @@
     -fx-background-color: -fx-livara-surface-muted;
     -fx-border-color: -fx-livara-border;
     -fx-padding: 8px 12px;
+}
+.pause-card .session-header {
+    -fx-padding: 0 0 8px 0;
 }
 
 .pause-card:hover, .pause-card.active {

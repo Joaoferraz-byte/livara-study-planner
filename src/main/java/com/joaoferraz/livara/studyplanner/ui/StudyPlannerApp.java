@@ -17,6 +17,7 @@ import javafx.animation.ScaleTransition;
 import javafx.animation.FadeTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -98,6 +99,9 @@ public final class StudyPlannerApp extends Application {
     private ScheduleTemplate current;
     private ProgressState progress;
     private List<StudySessionItem> sessionItems = List.of();
+    private String expandedItemId;
+    private boolean animateNextExpansion;
+    private boolean animateSessionRefresh;
     private Path schedulePath;
     private Path progressPath;
 
@@ -478,7 +482,26 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void renderSession() {
+        if (animateSessionRefresh && !sessionList.getChildren().isEmpty()) {
+            animateSessionRefresh = false;
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(120), sessionList);
+            fadeOut.setToValue(0.35);
+            fadeOut.setInterpolator(Interpolator.EASE_BOTH);
+            fadeOut.setOnFinished(event -> {
+                renderSession();
+                FadeTransition fadeIn = new FadeTransition(Duration.millis(220), sessionList);
+                fadeIn.setFromValue(0.35);
+                fadeIn.setToValue(1.0);
+                fadeIn.setInterpolator(Interpolator.EASE_BOTH);
+                fadeIn.play();
+            });
+            fadeOut.play();
+            return;
+        }
         sessionItems = sessionItems(current);
+        if (expandedItemId == null || sessionItems.stream().noneMatch(item -> item.id().equals(expandedItemId))) {
+            expandedItemId = nextPendingExpandableItemId();
+        }
         sessionList.getChildren().clear();
         for (int index = 0; index < sessionItems.size(); index++) {
             StudySessionItem item = sessionItems.get(index);
@@ -486,6 +509,7 @@ public final class StudyPlannerApp extends Application {
             card.setManaged(true);
             sessionList.getChildren().add(card);
         }
+        animateNextExpansion = false;
 
         long totalStudy = sessionItems.stream().filter(item -> !item.pause()).count();
         long completedStudy = sessionItems.stream()
@@ -546,6 +570,7 @@ public final class StudyPlannerApp extends Application {
         duration.getStyleClass().add("duration-chip");
         HBox header = new HBox(10, done, copy, duration);
         header.setAlignment(Pos.CENTER_LEFT);
+        header.getStyleClass().add("session-header");
         VBox card = new VBox(header);
         card.getStyleClass().addAll("session-card", "pause-card");
         configureCardState(card, null, item, index);
@@ -632,11 +657,15 @@ public final class StudyPlannerApp extends Application {
             card.getStyleClass().add("active");
         }
         if (detail != null) {
-            boolean expanded = !completed && isActive(index);
-            detail.setVisible(expanded);
-            detail.setManaged(expanded);
+            boolean expanded = !completed && item.id().equals(expandedItemId);
+            boolean animateExpansion = expanded && animateNextExpansion;
+            detail.setVisible(expanded && !animateExpansion);
+            detail.setManaged(expanded && !animateExpansion);
             if (expanded) {
                 card.getStyleClass().add("expanded");
+            }
+            if (animateExpansion) {
+                Platform.runLater(() -> animateDetails(detail, true));
             }
             card.setOnMouseClicked(event -> {
                 if (!(event.getTarget() instanceof CircularCheckBox)) {
@@ -644,7 +673,10 @@ public final class StudyPlannerApp extends Application {
                     animateDetails(detail, visible);
                     card.getStyleClass().remove("expanded");
                     if (visible) {
+                        expandedItemId = item.id();
                         card.getStyleClass().add("expanded");
+                    } else if (item.id().equals(expandedItemId)) {
+                        expandedItemId = null;
                     }
                 }
             });
@@ -719,6 +751,19 @@ public final class StudyPlannerApp extends Application {
         }
         return -1;
     }
+    private String nextPendingItemId() {
+        int index = nextPendingIndex();
+        return index < 0 ? null : sessionItems.get(index).id();
+    }
+
+    private String nextPendingExpandableItemId() {
+        return sessionItems.stream()
+                .filter(item -> !item.pause())
+                .filter(item -> !progress.isCompleted(item.id()))
+                .map(StudySessionItem::id)
+                .findFirst()
+                .orElse(null);
+    }
 
     private void toggleItem(StudySessionItem item) {
         boolean completed = !progress.isCompleted(item.id());
@@ -730,10 +775,12 @@ public final class StudyPlannerApp extends Application {
             advanceCycleAutomatically();
             return;
         }
+        expandedItemId = completed ? nextPendingExpandableItemId() : item.id();
+        animateNextExpansion = expandedItemId != null;
+        animateSessionRefresh = true;
         persistProgress();
         renderSession();
     }
-
     private void toggleTask(StudySessionItem item, StudyTask task, boolean completed) {
         progress = progress.withCompleted(taskId(item, task), completed);
         boolean allTasksCompleted = studyTasks().stream()
@@ -744,6 +791,9 @@ public final class StudyPlannerApp extends Application {
             advanceCycleAutomatically();
             return;
         }
+        expandedItemId = completed ? nextPendingExpandableItemId() : item.id();
+        animateNextExpansion = expandedItemId != null;
+        animateSessionRefresh = true;
         persistProgress();
         renderSession();
     }
