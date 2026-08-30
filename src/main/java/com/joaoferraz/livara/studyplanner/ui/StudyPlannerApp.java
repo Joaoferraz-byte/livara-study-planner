@@ -38,6 +38,7 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextFormatter;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.Separator;
 import javafx.scene.layout.BorderPane;
@@ -75,6 +76,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.function.UnaryOperator;
 
 public final class StudyPlannerApp extends Application {
     private static final Pattern COLOR = Pattern.compile("\\\"%s\\\"\\s*:\\s*\\\"(#[0-9a-fA-F]{6})\\\"");
@@ -124,13 +126,14 @@ public final class StudyPlannerApp extends Application {
     private ScheduleTemplate current;
     private TemplateLibrary library;
     private TemplateLibrary lastSavedLibrary;
+    private Cycle selectedEditorCycle;
 
     private static final class BlockEditorRow {
         private int order;
         private final ComboBox<FocusArea> focus;
         private final TextField topic;
         private final Spinner<Integer> duration;
-        private final Spinner<Integer> pause;
+        private final TextField pause;
         private final VBox row;
         private final VBox properties;
         private final Label focusSummary;
@@ -151,8 +154,7 @@ public final class StudyPlannerApp extends Application {
             this.topic = new TextField(block.topic());
             this.duration = new Spinner<>(new SpinnerValueFactory.IntegerSpinnerValueFactory(30, 180,
                     (int) block.duration().toMinutes(), 15));
-            this.pause = new Spinner<>(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 60,
-                    block.breakAfterMinutes(), 15));
+            this.pause = numericTextField(Integer.toString(block.breakAfterMinutes()));
             Label dayLabel = new Label(order + ".");
             dayLabel.getStyleClass().add("manager-order-label");
             focusSummary = new Label();
@@ -190,6 +192,14 @@ public final class StudyPlannerApp extends Application {
             refreshSummary();
         }
 
+        private static TextField numericTextField(String value) {
+            TextField field = new TextField(value);
+            UnaryOperator<TextFormatter.Change> filter = change ->
+                    change.getControlNewText().matches("[0-9]{0,3}") ? change : null;
+            field.setTextFormatter(new TextFormatter<>(filter));
+            return field;
+        }
+
         private void setEditAction(Runnable action) {
             editAction = action;
         }
@@ -201,7 +211,7 @@ public final class StudyPlannerApp extends Application {
         private void refreshSummary() {
             focusSummary.setText(focus.getValue() == null ? "Choose a focus" : focus.getValue().label());
             topicSummary.setText(topic.getText());
-            timingSummary.setText(duration.getValue() + " min  ·  " + pause.getValue() + " min pause");
+            timingSummary.setText(duration.getValue() + " min  ·  " + pause.getText() + " min pause");
             properties.getChildren().setAll(new Label("Focus: " + focusSummary.getText()),
                     new Label("Topic: " + topicSummary.getText()),
                     new Label("Timing: " + timingSummary.getText()));
@@ -231,8 +241,17 @@ public final class StudyPlannerApp extends Application {
         }
 
         private StudyBlock toBlock(int order) {
+            int pauseMinutes;
+            try {
+                pauseMinutes = Integer.parseInt(pause.getText());
+            } catch (NumberFormatException exception) {
+                throw new IllegalArgumentException("Break after must be a number between 0 and 60 minutes");
+            }
+            if (pauseMinutes < 0 || pauseMinutes > 60) {
+                throw new IllegalArgumentException("Break after must be a number between 0 and 60 minutes");
+            }
             return new StudyBlock(order, focus.getValue(), topic.getText(),
-                    java.time.Duration.ofMinutes(duration.getValue()), pause.getValue());
+                    java.time.Duration.ofMinutes(duration.getValue()), pauseMinutes);
         }
     }
     private ProgressState progress;
@@ -652,6 +671,9 @@ public final class StudyPlannerApp extends Application {
 
     private void showTemplatePage() {
         current = library.selected();
+        if (selectedEditorCycle != null && !current.hasCycle(selectedEditorCycle)) {
+            selectedEditorCycle = null;
+        }
         Label eyebrow = new Label("PLANNER MANAGEMENT");
         eyebrow.getStyleClass().add("manager-eyebrow");
         Label title = new Label("Templates & cycles");
@@ -659,18 +681,10 @@ public final class StudyPlannerApp extends Application {
         Label subtitle = new Label("Shape the active study system without leaving the dashboard.");
         subtitle.setWrapText(true);
         subtitle.getStyleClass().add("manager-subtitle");
+
         TextField name = new TextField(current.name());
         name.setPromptText("Template name");
         name.getStyleClass().add("manager-field");
-        ComboBox<Cycle> cycle = new ComboBox<>();
-        cycle.getItems().addAll(Cycle.values());
-        cycle.setConverter(new StringConverter<>() {
-            @Override public String toString(Cycle value) { return value == null ? "" : "Cycle " + value.label(); }
-            @Override public Cycle fromString(String value) { return Cycle.A; }
-        });
-        cycle.setValue(current.cycle());
-        cycle.setMaxWidth(Double.MAX_VALUE);
-        cycle.getStyleClass().add("manager-field");
         ComboBox<WorkflowTemplate> workflow = new ComboBox<>();
         workflow.getItems().addAll(WorkflowTemplate.values());
         workflow.setConverter(new StringConverter<>() {
@@ -680,9 +694,7 @@ public final class StudyPlannerApp extends Application {
         workflow.setValue(current.workflowTemplate());
         workflow.setMaxWidth(Double.MAX_VALUE);
         workflow.getStyleClass().add("manager-field");
-        Spinner<Integer> pause = new Spinner<>(
-                new SpinnerValueFactory.IntegerSpinnerValueFactory(15, 60, current.pauseMinutes(), 15));
-        pause.setMaxWidth(Double.MAX_VALUE);
+        TextField pause = numericField(Integer.toString(current.pauseMinutes()));
         pause.getStyleClass().add("manager-field");
         ComboBox<String> icon = new ComboBox<>();
         icon.getItems().addAll(TEMPLATE_ICON_IDS);
@@ -702,102 +714,16 @@ public final class StudyPlannerApp extends Application {
         });
         icon.setMaxWidth(Double.MAX_VALUE);
         icon.getStyleClass().add("manager-field");
-        GridPane form = new GridPane();
-        form.setHgap(12);
-        form.setVgap(10);
-        form.getStyleClass().add("manager-form");
-        form.setVisible(false);
-        form.setManaged(false);
-        addManagerField(form, 0, "TEMPLATE NAME", name);
-        addManagerField(form, 1, "CYCLE", cycle);
-        addManagerField(form, 2, "WORKFLOW", workflow);
-        addManagerField(form, 3, "PAUSE MINUTES", pause);
-        addManagerField(form, 4, "TEMPLATE ICON", icon);
-
-        VBox blockEditor = new VBox(6);
-        blockEditor.getStyleClass().add("block-editor");
-        List<BlockEditorRow> blockRows = new ArrayList<>();
-        int initialOrder = 1;
-        for (StudyBlock block : current.sequence()) {
-            addBlockEditorRow(blockEditor, blockRows, initialOrder++, block);
-        }
-        Button addBlock = new Button("Add block");
-        addBlock.getStyleClass().add("secondary-button");
-        addBlock.setOnAction(event -> showAddBlockPopup(blockEditor, blockRows,
-                new StudyBlock(blockRows.size() + 1, FocusArea.MARKET_PROGRAMMING,
-                        "New focus block", java.time.Duration.ofMinutes(60), pause.getValue())));
-        HBox blockTools = new HBox(addBlock);
-        blockTools.setAlignment(Pos.CENTER_RIGHT);
-        blockTools.getStyleClass().add("block-editor-tools");
-        Label blocksTitle = new Label("STUDY SEQUENCE");
-        blocksTitle.getStyleClass().add("manager-label");
-        VBox blockSection = new VBox(7, blocksTitle, blockEditor, blockTools);
-        blockSection.getStyleClass().add("block-editor-section");
-
-        Label scope = new Label("This editor updates the active schedule and preserves its validated block sequence.\n"
-                + "Cycle A and B are available as the built-in rotation modes.");
-        scope.setWrapText(true);
-        scope.getStyleClass().add("manager-note");
-
-        Button save = new Button("Save changes");
-        save.getStyleClass().add("primary-button");
-        save.setOnAction(event -> {
-            try {
-                ScheduleTemplate edited = rebuildEditedTemplate(name.getText(), cycle.getValue(), workflow.getValue(), pause.getValue(), icon.getValue(), blockRows);
-                library = library.updateSelected(edited);
-                current = library.selected();
-                progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
-                persistSchedule();
-                persistProgress();
-                expandedItemId = null;
-                renderSession();
-                statusLabel.setText("Template updated.");
-                showDashboardPage();
-            } catch (RuntimeException exception) {
-                showError("Unable to save template", exception.getMessage());
-            }
-        });
-
-        Button restore = new Button("Restore");
-        restore.getStyleClass().add("secondary-button");
-        restore.setTooltip(new Tooltip("Restore the last saved template"));
-        restore.setOnAction(event -> restoreLastSavedTemplate());
 
         Button remove = new Button("Delete template");
         remove.getStyleClass().add("danger-button");
-        remove.setOnAction(event -> {
-            try {
-                String removedId = library.selectedTemplateId();
-                if (library.entries().size() == 1) {
-                    ScheduleTemplate fallback = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
-                    library = TemplateLibrary.single("default", fallback);
-                    usingLegacyProgressPath = true;
-                } else {
-                    library = library.remove(removedId);
-                }
-                activateSelectedTemplate();
-                persistSchedule();
-                persistProgress();
-                expandedItemId = null;
-                renderSession();
-                statusLabel.setText("Template deleted; active template updated.");
-                showDashboardPage();
-            } catch (RuntimeException exception) {
-                showError("Unable to delete template", exception.getMessage());
-            }
-        });
-
-        HBox actions = new HBox(9, restore, new Region(), save);
-        HBox.setHgrow(actions.getChildren().get(1), Priority.ALWAYS);
-        actions.setAlignment(Pos.CENTER_LEFT);
-        actions.getStyleClass().add("manager-actions");
-        VBox intro = new VBox(4, eyebrow, title, subtitle);
-        HBox pageHeader = new HBox(16, intro);
-        pageHeader.setAlignment(Pos.TOP_LEFT);
-        HBox.setHgrow(intro, Priority.ALWAYS);
+        remove.setOnAction(event -> deleteSelectedTemplate());
         Label active = new Label("ACTIVE TEMPLATE\n" + current.name());
         active.getStyleClass().add("manager-active-badge");
-        pageHeader.getChildren().add(active);
+        VBox intro = new VBox(4, eyebrow, title, subtitle);
+        HBox pageHeader = new HBox(16, intro, active);
+        pageHeader.setAlignment(Pos.TOP_LEFT);
+        HBox.setHgrow(intro, Priority.ALWAYS);
 
         FlowPane templateLibrary = new FlowPane();
         templateLibrary.setHgap(10);
@@ -813,42 +739,133 @@ public final class StudyPlannerApp extends Application {
                     () -> selectTemplate(entry.id()));
         }
         addTemplateCard(templateLibrary, templateCards, "New template",
-                "Create and edit a new study system", TablerIcon.icon("plus"), false,
+                "Create an empty template and add cycles", TablerIcon.icon("plus"), false,
                 this::startNewTemplate);
         Label libraryTitle = new Label("TEMPLATE LIBRARY");
         libraryTitle.getStyleClass().add("manager-label");
-        Label libraryHint = new Label("Templates contain their cycles, blocks, pauses and tasks. Select one to edit it below.");
+        Label libraryHint = new Label("Templates contain their own cycles, blocks, pauses and tasks. Select one to edit it below.");
+        libraryHint.setWrapText(true);
         libraryHint.getStyleClass().add("manager-section-hint");
         VBox librarySection = new VBox(8, new VBox(2, libraryTitle, libraryHint), templateLibrary);
         librarySection.getStyleClass().add("manager-section");
 
         Label detailsTitle = new Label("Template identity");
         detailsTitle.getStyleClass().add("manager-section-title");
-        Label detailsHint = new Label("One complete system: choose its identity here, then edit the active cycle below.");
+        Label detailsHint = new Label("Identity belongs to the template. Cycles are separate editable schedules below.");
+        detailsHint.setWrapText(true);
         detailsHint.getStyleClass().add("manager-section-hint");
         Label identitySummary = new Label();
         identitySummary.getStyleClass().add("identity-summary");
+        Runnable refreshIdentity = () -> identitySummary.setText(name.getText() + "  ·  "
+                + workflow.getValue().label() + "  ·  " + pause.getText() + " min pause");
+        refreshIdentity.run();
         Button editIdentity = new Button("Edit details");
         editIdentity.getStyleClass().add("secondary-button");
-        Runnable refreshIdentity = () -> identitySummary.setText(name.getText() + "  ·  Cycle " + cycle.getValue().label()
-                + "  ·  " + workflow.getValue().label() + "  ·  " + pause.getValue() + " min pause");
-        refreshIdentity.run();
-        editIdentity.setOnAction(event -> showIdentityPopup(editIdentity, name, cycle, workflow, pause, icon, refreshIdentity));
-        HBox identityBody = new HBox(12, identitySummary, editIdentity);
+        editIdentity.setOnAction(event -> showIdentityPopup(editIdentity, name, workflow, pause, icon, refreshIdentity));
+        HBox identityBody = new HBox(12, identitySummary, editIdentity, remove);
         identityBody.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(identitySummary, Priority.ALWAYS);
-        Button deleteTemplate = new Button("Delete template");
-        deleteTemplate.getStyleClass().add("danger-button");
-        deleteTemplate.setOnAction(remove.getOnAction());
-        identityBody.getChildren().add(deleteTemplate);
-        VBox detailsHeading = new VBox(2, detailsTitle, detailsHint);
-        VBox detailsSection = new VBox(8, detailsHeading, identityBody);
+        VBox detailsSection = new VBox(8, new VBox(2, detailsTitle, detailsHint), identityBody);
         detailsSection.getStyleClass().add("manager-section");
 
-        VBox content = new VBox(16, pageHeader, librarySection, detailsSection, blockSection, scope, actions);
+        FlowPane cycleLibrary = new FlowPane();
+        cycleLibrary.setHgap(10);
+        cycleLibrary.setVgap(10);
+        cycleLibrary.setPrefWrapLength(760);
+        cycleLibrary.getStyleClass().add("cycle-library");
+        List<VBox> cycleCards = new ArrayList<>();
+        for (Cycle value : current.createdCycles()) {
+            boolean selected = value == selectedEditorCycle;
+            VBox card = new VBox(6,
+                    new Label("Cycle " + value.label()),
+                    new Label(value.subjects()),
+                    new Label(current.totalBlocks(value) + " blocks · " + current.pauseMinutes() + " min pause"));
+            card.getStyleClass().add("cycle-card");
+            if (selected) card.getStyleClass().add("selected");
+            card.setOnMouseClicked(event -> {
+                selectedEditorCycle = value;
+                showTemplatePage();
+            });
+            cycleCards.add(card);
+            cycleLibrary.getChildren().add(card);
+        }
+        Button createCycle = new Button("Create new cycle");
+        createCycle.getStyleClass().add("secondary-button");
+        createCycle.setOnAction(event -> createCycle());
+        Label cyclesTitle = new Label("CYCLES");
+        cyclesTitle.getStyleClass().add("manager-label");
+        Label cyclesHint = new Label(current.createdCycles().isEmpty()
+                ? "This template has no cycles yet. Create one to begin its study sequence."
+                : "Select a cycle to edit its blocks. Each cycle is independent inside this template.");
+        cyclesHint.setWrapText(true);
+        cyclesHint.getStyleClass().add("manager-section-hint");
+        VBox cycleSection = new VBox(8, new VBox(2, cyclesTitle, cyclesHint), cycleLibrary, createCycle);
+        cycleSection.getStyleClass().add("manager-section");
+
+        VBox blockEditor = new VBox(6);
+        blockEditor.getStyleClass().add("block-editor");
+        List<BlockEditorRow> blockRows = new ArrayList<>();
+        if (selectedEditorCycle != null) {
+            int initialOrder = 1;
+            for (StudyBlock block : current.sequence(selectedEditorCycle)) {
+                addBlockEditorRow(blockEditor, blockRows, initialOrder++, block);
+            }
+        }
+        Button addBlock = new Button("Add block");
+        addBlock.getStyleClass().add("secondary-button");
+        addBlock.setDisable(selectedEditorCycle == null);
+        addBlock.setOnAction(event -> showAddBlockPopup(blockEditor, blockRows,
+                new StudyBlock(blockRows.size() + 1, FocusArea.MARKET_PROGRAMMING,
+                        "New focus block", java.time.Duration.ofMinutes(60), parsePauseMinutes(pause.getText()))));
+        Label blocksTitle = new Label(selectedEditorCycle == null ? "STUDY SEQUENCE" :
+                "STUDY SEQUENCE · CYCLE " + selectedEditorCycle.label());
+        blocksTitle.getStyleClass().add("manager-label");
+        Label blocksHint = new Label(selectedEditorCycle == null
+                ? "Select a cycle above to edit its blocks."
+                : "Add, remove or edit blocks for this cycle only.");
+        blocksHint.getStyleClass().add("manager-section-hint");
+        VBox blockSection = new VBox(7, blocksTitle, blocksHint, blockEditor, addBlock);
+        blockSection.getStyleClass().add("block-editor-section");
+
+        Button save = new Button("Save changes");
+        save.getStyleClass().add("primary-button");
+        save.setOnAction(event -> {
+            try {
+                int pauseMinutes = parsePauseMinutes(pause.getText());
+                ScheduleTemplate edited;
+                if (selectedEditorCycle == null) {
+                    edited = current.withIdentity(name.getText(), icon.getValue())
+                            .withWorkflowTemplate(workflow.getValue())
+                            .withPauseMinutes(pauseMinutes);
+                } else {
+                    edited = rebuildEditedTemplate(name.getText(), selectedEditorCycle,
+                            workflow.getValue(), pauseMinutes, icon.getValue(), blockRows);
+                }
+                library = library.updateSelected(edited);
+                current = library.selected();
+                progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+                persistSchedule();
+                persistProgress();
+                expandedItemId = null;
+                renderSession();
+                statusLabel.setText("Template updated.");
+                showDashboardPage();
+            } catch (RuntimeException exception) {
+                showError("Unable to save template", exception.getMessage());
+            }
+        });
+        Button restore = new Button("Restore");
+        restore.getStyleClass().add("secondary-button");
+        restore.setTooltip(new Tooltip("Restore the last saved template"));
+        restore.setOnAction(event -> restoreLastSavedTemplate());
+        HBox actions = new HBox(9, restore, new Region(), save);
+        HBox.setHgrow(actions.getChildren().get(1), Priority.ALWAYS);
+        actions.setAlignment(Pos.CENTER_LEFT);
+        actions.getStyleClass().add("manager-actions");
+
+        VBox content = new VBox(16, pageHeader, librarySection, detailsSection, cycleSection, blockSection, actions);
         content.getStyleClass().add("manager-panel");
         content.setFillWidth(true);
-        VBox.setVgrow(form, Priority.ALWAYS);
         content.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         ScrollPane managerScroll = new ScrollPane(content);
         managerScroll.setFitToWidth(true);
@@ -856,13 +873,71 @@ public final class StudyPlannerApp extends Application {
         managerScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         managerScroll.getStyleClass().add("manager-scroll");
         mainViewHost.getChildren().setAll(managerScroll);
-        content.setOpacity(0);
-        content.setTranslateY(10);
-        FadeTransition fade = new FadeTransition(Duration.millis(180), content);
-        fade.setToValue(1);
-        javafx.animation.TranslateTransition slide = new javafx.animation.TranslateTransition(Duration.millis(180), content);
-        slide.setToY(0);
-        new ParallelTransition(fade, slide).play();
+    }
+
+    private TextField numericField(String value) {
+        TextField field = new TextField(value);
+        UnaryOperator<TextFormatter.Change> filter = change ->
+                change.getControlNewText().matches("[0-9]{0,3}") ? change : null;
+        field.setTextFormatter(new TextFormatter<>(filter));
+        return field;
+    }
+
+    private int parsePauseMinutes(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Pause must be a number between 0 and 60 minutes");
+        }
+        int parsed;
+        try {
+            parsed = Integer.parseInt(value);
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("Pause must be a number between 0 and 60 minutes");
+        }
+        if (parsed < 0 || parsed > 60) {
+            throw new IllegalArgumentException("Pause must be a number between 0 and 60 minutes");
+        }
+        return parsed;
+    }
+
+    private void createCycle() {
+        try {
+            Cycle next = java.util.Arrays.stream(Cycle.values())
+                    .filter(value -> !current.hasCycle(value))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("All available cycles already exist"));
+            current = current.withAddedCycle(next, DefaultScheduleFactory.emptyCycle());
+            library = library.updateSelected(current);
+            selectedEditorCycle = next;
+            activateSelectedTemplate();
+            persistSchedule();
+            persistProgress();
+            showTemplatePage();
+        } catch (RuntimeException exception) {
+            showError("Unable to create cycle", exception.getMessage());
+        }
+    }
+
+    private void deleteSelectedTemplate() {
+        try {
+            String removedId = library.selectedTemplateId();
+            if (library.entries().size() == 1) {
+                ScheduleTemplate fallback = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
+                library = TemplateLibrary.single("default", fallback);
+                usingLegacyProgressPath = true;
+            } else {
+                library = library.remove(removedId);
+            }
+            selectedEditorCycle = null;
+            activateSelectedTemplate();
+            persistSchedule();
+            persistProgress();
+            expandedItemId = null;
+            renderSession();
+            statusLabel.setText("Template deleted; active template updated.");
+            showDashboardPage();
+        } catch (RuntimeException exception) {
+            showError("Unable to delete template", exception.getMessage());
+        }
     }
 
     private StackPane popupRoot(Node panel) {
@@ -922,8 +997,8 @@ public final class StudyPlannerApp extends Application {
         }
     }
 
-    private void showIdentityPopup(Node anchor, TextField name, ComboBox<Cycle> cycle,
-                                   ComboBox<WorkflowTemplate> workflow, Spinner<Integer> pause,
+    private void showIdentityPopup(Node anchor, TextField name,
+                                   ComboBox<WorkflowTemplate> workflow, TextField pause,
                                    ComboBox<String> icon, Runnable refresh) {
         VBox panel = new VBox(10);
         panel.getStyleClass().add("editor-popup");
@@ -931,17 +1006,14 @@ public final class StudyPlannerApp extends Application {
         title.getStyleClass().add("popup-title");
         TextField nameCopy = new TextField(name.getText());
         nameCopy.setPromptText("Template name");
-        ComboBox<Cycle> cycleCopy = new ComboBox<>();
-        cycleCopy.getItems().addAll(Cycle.values());
-        cycleCopy.setValue(cycle.getValue());
         ComboBox<WorkflowTemplate> workflowCopy = new ComboBox<>();
         workflowCopy.getItems().addAll(WorkflowTemplate.values());
         workflowCopy.setValue(workflow.getValue());
-        Spinner<Integer> pauseCopy = new Spinner<>(new SpinnerValueFactory.IntegerSpinnerValueFactory(15, 60, pause.getValue(), 15));
+        TextField pauseCopy = numericField(pause.getText());
         ComboBox<String> iconCopy = new ComboBox<>();
         iconCopy.getItems().addAll(icon.getItems());
         iconCopy.setValue(icon.getValue());
-        for (Node node : List.of(nameCopy, cycleCopy, workflowCopy, pauseCopy, iconCopy)) {
+        for (Node node : List.of(nameCopy, workflowCopy, pauseCopy, iconCopy)) {
             node.getStyleClass().add("popup-field");
             if (node instanceof Control control) control.setMaxWidth(Double.MAX_VALUE);
         }
@@ -952,20 +1024,25 @@ public final class StudyPlannerApp extends Application {
         HBox actions = new HBox(8, cancel, apply);
         actions.setAlignment(Pos.CENTER);
         actions.setMaxWidth(Double.MAX_VALUE);
-        panel.getChildren().setAll(title, new Label("Name"), nameCopy, new Label("Cycle"), cycleCopy,
-                new Label("Workflow"), workflowCopy, new Label("Pause"), pauseCopy, new Label("Icon"), iconCopy, actions);
+        panel.getChildren().setAll(title, new Label("Name"), nameCopy,
+                new Label("Workflow"), workflowCopy, new Label("Pause minutes"), pauseCopy,
+                new Label("Icon"), iconCopy, actions);
         Popup popup = new Popup();
         popup.setAutoHide(true);
         popup.getContent().add(popupRoot(panel));
         cancel.setOnAction(event -> popup.hide());
         apply.setOnAction(event -> {
-            name.setText(nameCopy.getText());
-            cycle.setValue(cycleCopy.getValue());
-            workflow.setValue(workflowCopy.getValue());
-            pause.getValueFactory().setValue(pauseCopy.getValue());
-            icon.setValue(iconCopy.getValue());
-            refresh.run();
-            popup.hide();
+            try {
+                parsePauseMinutes(pauseCopy.getText());
+                name.setText(nameCopy.getText());
+                workflow.setValue(workflowCopy.getValue());
+                pause.setText(pauseCopy.getText());
+                icon.setValue(iconCopy.getValue());
+                refresh.run();
+                popup.hide();
+            } catch (RuntimeException exception) {
+                showError("Unable to apply details", exception.getMessage());
+            }
         });
         popup.setOnShown(event -> {
             stylePopupScene(popup);
@@ -1123,6 +1200,7 @@ public final class StudyPlannerApp extends Application {
         ScheduleTemplate draft = DefaultScheduleFactory.createDraft(Cycle.A)
                 .withIdentity("New study template", "x");
         library = library.add(draft);
+        selectedEditorCycle = null;
         usingLegacyProgressPath = false;
         activateSelectedTemplate();
         persistSchedule();
@@ -1134,6 +1212,7 @@ public final class StudyPlannerApp extends Application {
     private void selectTemplate(String id) {
         try {
             library = library.select(id);
+            selectedEditorCycle = null;
             activateSelectedTemplate();
             persistSchedule();
             renderSession();
