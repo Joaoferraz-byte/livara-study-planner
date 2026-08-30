@@ -112,6 +112,10 @@ public final class ScheduleTemplate {
         return withCycles(schemaVersion, name, newCycle, workflowTemplate, pauseMinutes, iconId, blocksByCycle);
     }
 
+    public ScheduleTemplate withIdentity(String newName, String newIconId) {
+        return withCycles(schemaVersion, newName, cycle, workflowTemplate, pauseMinutes, newIconId, blocksByCycle);
+    }
+
     public ScheduleTemplate withWorkflowTemplate(WorkflowTemplate newWorkflowTemplate) {
         return withCycles(schemaVersion, name, cycle, newWorkflowTemplate, pauseMinutes, iconId, blocksByCycle);
     }
