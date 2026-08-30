@@ -803,10 +803,7 @@ public final class StudyPlannerApp extends Application {
             cycleCards.add(card);
             cycleLibrary.getChildren().add(card);
         }
-        Button createCycle = new Button("Create new cycle");
-        createCycle.getStyleClass().add("secondary-button");
-        createCycle.setDisable(current.createdCycles().size() >= Cycle.values().length);
-        createCycle.setOnAction(event -> createCycle());
+        addCreateCycleButton(cycleLibrary, current.createdCycles().size() >= Cycle.values().length);
         Label cyclesTitle = new Label("CYCLES");
         cyclesTitle.getStyleClass().add("manager-label");
         Label cyclesHint = new Label(current.createdCycles().isEmpty()
@@ -814,7 +811,7 @@ public final class StudyPlannerApp extends Application {
                 : "Select a cycle to edit its blocks. Each cycle is independent inside this template.");
         cyclesHint.setWrapText(true);
         cyclesHint.getStyleClass().add("manager-section-hint");
-        VBox cycleSection = new VBox(8, new VBox(2, cyclesTitle, cyclesHint), cycleLibrary, createCycle);
+        VBox cycleSection = new VBox(8, new VBox(2, cyclesTitle, cyclesHint), cycleLibrary);
         cycleSection.getStyleClass().add("manager-section");
 
         VBox blockEditor = new VBox(6);
@@ -1192,24 +1189,34 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void addCreateTemplateButton(FlowPane library, Runnable onSelected) {
+        addCreateAffordance(library, "Create new template", false, onSelected);
+    }
+
+    private void addCreateCycleButton(FlowPane library, boolean disabled) {
+        addCreateAffordance(library, "Create new cycle", disabled, this::createCycle);
+    }
+
+    private void addCreateAffordance(FlowPane library, String accessibleText,
+                                     boolean disabled, Runnable onSelected) {
         SVGPath plus = TablerIcon.icon("plus");
-        plus.getStyleClass().add("create-template-icon");
+        plus.getStyleClass().add("create-affordance-icon");
         Button create = new Button();
         create.setGraphic(plus);
         create.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
-        create.setAccessibleText("Create new template");
-        create.setTooltip(new Tooltip("Create new template"));
+        create.setAccessibleText(accessibleText);
+        create.setTooltip(new Tooltip(accessibleText));
         create.setMinSize(52, 52);
         create.setPrefSize(52, 52);
         create.setMaxSize(52, 52);
-        create.getStyleClass().add("create-template-button");
+        create.setDisable(disabled);
+        create.getStyleClass().add("create-affordance-button");
         create.setOnAction(event -> onSelected.run());
         StackPane slot = new StackPane(create);
         slot.setMinSize(88, 112);
         slot.setPrefSize(88, 112);
         slot.setMaxSize(88, 112);
         slot.setAlignment(Pos.CENTER);
-        slot.getStyleClass().add("create-template-slot");
+        slot.getStyleClass().add("create-affordance-slot");
         library.getChildren().add(slot);
     }
 
