@@ -37,6 +37,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.SVGPath;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.geometry.Rectangle2D;
@@ -67,6 +68,7 @@ public final class StudyPlannerApp extends Application {
     private final GridPane dashboardGrid = new GridPane();
     private final Label cycleLabel = new Label();
     private final Label progressLabel = new Label();
+    private final Label completionSummaryValue = new Label();
     private final Label statusLabel = new Label();
     private final Label focusDescription = new Label();
     private final Label flowSummary = new Label();
@@ -165,7 +167,7 @@ public final class StudyPlannerApp extends Application {
         left.setAlignment(Pos.CENTER_LEFT);
 
         menu.setText("");
-        Label menuIcon = new Label("⌂");
+        SVGPath menuIcon = TablerIcon.home();
         menuIcon.getStyleClass().add("menu-icon");
         menu.setGraphic(menuIcon);
         menu.setAccessibleText("Open planner menu");
@@ -320,6 +322,7 @@ public final class StudyPlannerApp extends Application {
         progressBar.setMaxWidth(Double.MAX_VALUE);
         progressBar.getStyleClass().add("progress-bar");
         remainingMetric.getStyleClass().add("summary-value");
+        completionSummaryValue.getStyleClass().add("summary-row-value");
         Label caption = new Label("The next incomplete item is highlighted. Completing every focus and pause advances the cycle automatically.");
         caption.setWrapText(true);
         caption.getStyleClass().add("widget-copy");
@@ -331,8 +334,11 @@ public final class StudyPlannerApp extends Application {
         completedLabel.getStyleClass().add("summary-row-label");
         HBox rotationRow = summaryRow(rotationLabel, rotationValue);
         HBox completedRow = summaryRow(completedLabel, completedCyclesValue);
-        summaryPanel.getChildren().setAll(title, remainingMetric, progressBar, caption,
-                new Separator(), rotationRow, completedRow);
+        Label completionLabel = new Label("SESSION COMPLETION");
+        completionLabel.getStyleClass().add("summary-row-label");
+        HBox completionRow = summaryRow(completionLabel, completionSummaryValue);
+        summaryPanel.getChildren().setAll(title, remainingMetric, completionRow, progressBar, caption,
+                rotationRow, completedRow);
         summaryPanel.getStyleClass().add("widget");
         return summaryPanel;
     }
@@ -361,6 +367,7 @@ public final class StudyPlannerApp extends Application {
         folders.getStyleClass().add("folder-list");
         for (String folder : VAULT_FOLDERS) {
             Button shortcut = new Button(folder);
+            shortcut.setGraphic(folderIcon(folder));
             shortcut.getStyleClass().add("folder-link");
             shortcut.setMaxWidth(Double.MAX_VALUE);
             shortcut.setAlignment(Pos.CENTER_LEFT);
@@ -370,6 +377,18 @@ public final class StudyPlannerApp extends Application {
         vaultPanel.getChildren().setAll(title, hint, openVault, new Separator(), folders);
         vaultPanel.getStyleClass().add("widget");
         return vaultPanel;
+    }
+
+    private SVGPath folderIcon(String folder) {
+        return switch (folder) {
+            case "Black Box" -> TablerIcon.book();
+            case "Source Notes" -> TablerIcon.notes();
+            case "Projects" -> TablerIcon.project();
+            case "Daily Notes" -> TablerIcon.calendar();
+            case "Xournal++" -> TablerIcon.palette();
+            case "References" -> TablerIcon.book();
+            default -> TablerIcon.folder();
+        };
     }
 
     private VBox widget(String eyebrowText) {
@@ -462,6 +481,7 @@ public final class StudyPlannerApp extends Application {
         remainingMetric.setText(remainingItems + " items remaining");
         rotationValue.setText("Cycle " + current.cycle().label() + "  ·  " + current.cycle().subjects());
         completedCyclesValue.setText("0");
+        completionSummaryValue.setText(completedStudy + " / " + totalStudy + " focus blocks");
         progressBar.setProgress(ratio);
         progressRingArc(ratio);
         progressRingValue.setText(completedStudy + " / " + totalStudy);
@@ -472,9 +492,7 @@ public final class StudyPlannerApp extends Application {
     }
 
     private VBox studyCard(StudySessionItem item, int index) {
-        CheckBox done = checkBox(item);
-        Label order = new Label(String.format("%02d", item.order()));
-        order.getStyleClass().add("item-order");
+        CheckBox done = checkBox(item, "item-check", 10, 6.2, 3.1);
         Label title = new Label(item.title());
         title.getStyleClass().add("item-title");
         Label subtitle = new Label(item.subtitle());
@@ -486,7 +504,7 @@ public final class StudyPlannerApp extends Application {
 
         Label duration = new Label(item.durationMinutes() + " min");
         duration.getStyleClass().add("duration-chip");
-        HBox header = new HBox(10, done, order, copy, duration);
+        HBox header = new HBox(10, done, copy, duration);
         header.setAlignment(Pos.CENTER_LEFT);
         header.getStyleClass().add("session-header");
 
@@ -498,7 +516,7 @@ public final class StudyPlannerApp extends Application {
     }
 
     private VBox pauseCard(StudySessionItem item, int index) {
-        CheckBox done = checkBox(item);
+        CheckBox done = checkBox(item, "item-check", 10, 6.2, 3.1);
         Label title = new Label("Recovery pause");
         title.getStyleClass().add("pause-title");
         Label subtitle = new Label("Step away, hydrate, and return with intention");
@@ -515,12 +533,23 @@ public final class StudyPlannerApp extends Application {
         return card;
     }
 
-    private CheckBox checkBox(StudySessionItem item) {
+    private CheckBox checkBox(StudySessionItem item, String cssClass,
+                              double outerRadius, double subRadius, double coreRadius) {
         CheckBox done = new CheckBox();
         done.setSelected(progress.isCompleted(item.id()));
         done.setMnemonicParsing(false);
         done.setOnAction(event -> toggleItem(item));
-        done.getStyleClass().add("item-check");
+        done.getStyleClass().add(cssClass);
+
+        Circle outer = new Circle(outerRadius);
+        outer.getStyleClass().add("check-outer");
+        Circle sub = new Circle(subRadius);
+        sub.getStyleClass().add("check-subcircle");
+        Circle core = new Circle(coreRadius);
+        core.getStyleClass().add("check-core");
+        StackPane visual = new StackPane(outer, sub, core);
+        visual.getStyleClass().add("check-visual");
+        done.setGraphic(visual);
         return done;
     }
 
@@ -547,7 +576,7 @@ public final class StudyPlannerApp extends Application {
         VBox tasks = new VBox(0);
         for (int taskIndex = 0; taskIndex < taskDefinitions.size(); taskIndex++) {
             StudyTask task = taskDefinitions.get(taskIndex);
-            tasks.getChildren().add(taskRow(item, taskIndex + 1, task));
+            tasks.getChildren().add(taskRow(item, task));
         }
         tasks.getStyleClass().add("task-list");
         VBox detail = new VBox(10, chips, callout, tasks);
@@ -557,13 +586,11 @@ public final class StudyPlannerApp extends Application {
         return detail;
     }
 
-    private HBox taskRow(StudySessionItem item, int order, StudyTask task) {
+    private HBox taskRow(StudySessionItem item, StudyTask task) {
         String taskId = taskId(item, task);
-        CheckBox done = new CheckBox();
+        CheckBox done = checkBox(item, "task-check", 7.5, 4.7, 2.2);
         done.setSelected(progress.isCompleted(taskId) || progress.isCompleted(item.id()));
-        done.setMnemonicParsing(false);
         done.setOnAction(event -> toggleTask(item, task, done.isSelected()));
-        done.getStyleClass().add("task-check");
 
         Label taskTitle = new Label(task.title());
         taskTitle.getStyleClass().add("task-title");

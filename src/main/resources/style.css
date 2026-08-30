@@ -152,6 +152,9 @@
 }
 
 .menu-icon {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-muted;
+    -fx-stroke-width: 1.6px;
     -fx-min-width: 18px;
     -fx-pref-width: 18px;
     -fx-max-width: 18px;
@@ -166,7 +169,7 @@
 
 .menu-button:hover .menu-icon,
 .menu-button:focused .menu-icon {
-    -fx-text-fill: -fx-livara-accent;
+    -fx-stroke: -fx-livara-accent;
 }
 
 .menu-button:hover, .menu-button:focused {
@@ -322,37 +325,53 @@
 }
 
 .item-check {
-    -fx-min-width: 18px;
-    -fx-pref-width: 18px;
-    -fx-max-width: 18px;
-    -fx-min-height: 18px;
-    -fx-pref-height: 18px;
-    -fx-max-height: 18px;
+    -fx-min-width: 22px;
+    -fx-pref-width: 22px;
+    -fx-max-width: 22px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
     -fx-padding: 0;
 }
 
-.item-check .box {
+.check-visual {
+    -fx-min-width: 22px;
+    -fx-pref-width: 22px;
+    -fx-max-width: 22px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
+}
+
+.check-outer {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-accent;
+    -fx-stroke-width: 1px;
+}
+
+.check-subcircle {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-secondary;
+    -fx-stroke-width: 1.5px;
+}
+
+.check-core {
+    -fx-fill: -fx-livara-background;
+}
+
+.item-check:selected .check-subcircle {
+    -fx-fill: -fx-livara-secondary;
+    -fx-stroke: -fx-livara-secondary;
+}
+
+.item-check .box,
+.item-check .mark {
     -fx-background-color: transparent;
-    -fx-background-radius: 999px;
-    -fx-border-color: -fx-livara-accent;
-    -fx-border-width: 1px;
-    -fx-border-radius: 999px;
-    -fx-padding: 2px;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
 }
 
-.item-check:hover .box {
-    -fx-border-color: -fx-livara-accent;
-    -fx-background-color: -fx-livara-accent-soft;
-}
 
-.item-check:selected .box {
-    -fx-background-color: -fx-livara-accent;
-    -fx-border-color: -fx-livara-accent;
-}
-
-.item-check:selected .mark {
-    -fx-background-color: -fx-livara-background;
-}
 
 .item-order {
     -fx-font-size: 9px;
@@ -439,32 +458,47 @@
 }
 
 .task-check {
-    -fx-min-width: 15px;
-    -fx-pref-width: 15px;
-    -fx-max-width: 15px;
-    -fx-min-height: 15px;
-    -fx-pref-height: 15px;
-    -fx-max-height: 15px;
+    -fx-min-width: 17px;
+    -fx-pref-width: 17px;
+    -fx-max-width: 17px;
+    -fx-min-height: 17px;
+    -fx-pref-height: 17px;
+    -fx-max-height: 17px;
     -fx-padding: 0;
 }
 
-.task-check .box {
+.task-check .check-visual {
+    -fx-min-width: 17px;
+    -fx-pref-width: 17px;
+    -fx-max-width: 17px;
+    -fx-min-height: 17px;
+    -fx-pref-height: 17px;
+    -fx-max-height: 17px;
+}
+
+.task-check .check-outer {
+    -fx-stroke: -fx-livara-secondary;
+    -fx-stroke-width: 1px;
+}
+
+.task-check .check-subcircle {
+    -fx-stroke: -fx-livara-accent;
+    -fx-stroke-width: 1.2px;
+}
+
+.task-check:selected .check-subcircle {
+    -fx-fill: -fx-livara-accent;
+    -fx-stroke: -fx-livara-accent;
+}
+
+.task-check .box,
+.task-check .mark {
     -fx-background-color: transparent;
-    -fx-background-radius: 999px;
-    -fx-border-color: -fx-livara-border-strong;
-    -fx-border-radius: 999px;
-    -fx-border-width: 1px;
-    -fx-padding: 2px;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
 }
-
-.task-check:hover .box,
-.task-check:selected .box {
-    -fx-background-color: -fx-livara-accent;
-    -fx-border-color: -fx-livara-accent;
-}
-
-.task-check:selected .mark {
-    -fx-background-color: -fx-livara-background;
+.task-check:hover .check-subcircle {
+    -fx-fill: -fx-livara-accent-soft;
 }
 
 .task-number {
@@ -577,9 +611,16 @@
 .folder-link {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
-    -fx-padding: 5px 3px;
     -fx-text-fill: -fx-livara-muted;
+    -fx-padding: 5px 7px;
     -fx-alignment: CENTER_LEFT;
+    -fx-graphic-text-gap: 8px;
+}
+
+.folder-link .tabler-icon {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-muted;
+    -fx-stroke-width: 1.5px;
 }
 
 .folder-link:hover {
@@ -664,25 +705,20 @@
     -fx-text-fill: -fx-livara-text;
 }
 
-.scroll-bar:vertical {
-    -fx-background-color: transparent;
-    -fx-pref-width: 7px;
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-opacity: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+    -fx-min-width: 0;
+    -fx-min-height: 0;
+    -fx-max-width: 0;
+    -fx-max-height: 0;
 }
-
-.scroll-bar:vertical .track {
-    -fx-background-color: transparent;
-}
-
-.scroll-bar:vertical .thumb {
-    -fx-background-color: -fx-livara-border-strong;
-    -fx-background-radius: 999px;
-}
-
-.scroll-bar:vertical .thumb:hover {
-    -fx-background-color: -fx-livara-accent;
-}
-
-.scroll-bar .increment-button, .scroll-bar .decrement-button {
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button,
+.scroll-bar .track,
+.scroll-bar .thumb {
     -fx-padding: 0;
     -fx-background-color: transparent;
 }
