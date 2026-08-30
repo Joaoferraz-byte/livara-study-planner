@@ -139,8 +139,22 @@
 }
 
 .menu-button {
+    -fx-min-width: 36px;
+    -fx-pref-width: 36px;
+    -fx-max-width: 36px;
+    -fx-min-height: 32px;
+    -fx-pref-height: 32px;
+    -fx-max-height: 32px;
     -fx-background-color: -fx-livara-surface-raised;
     -fx-border-color: -fx-livara-border-strong;
+    -fx-text-fill: -fx-livara-text;
+    -fx-padding: 0;
+}
+
+.menu-icon {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-line-spacing: -4px;
     -fx-text-fill: -fx-livara-text;
 }
 
@@ -152,11 +166,15 @@
 
 .menu-button .arrow-button {
     -fx-background-color: transparent;
-    -fx-padding: 0 2px 0 5px;
+    -fx-min-width: 0;
+    -fx-pref-width: 0;
+    -fx-max-width: 0;
+    -fx-padding: 0;
 }
 
 .menu-button .arrow {
-    -fx-background-color: -fx-livara-muted;
+    -fx-padding: 0;
+    -fx-shape: "";
 }
 
 .dashboard-grid {
@@ -363,6 +381,11 @@
     -fx-background-color: transparent;
 }
 
+.detail-chips .detail-chip {
+    -fx-alignment: CENTER;
+    -fx-max-width: infinity;
+}
+
 .detail-chip {
     -fx-background-color: -fx-livara-surface-highlight;
     -fx-background-radius: 999px;
@@ -398,6 +421,40 @@
     -fx-border-color: -fx-livara-border transparent transparent transparent;
     -fx-border-width: 1px 0 0 0;
     -fx-padding: 9px 0 8px 0;
+}
+
+.task-row.completed .task-title {
+    -fx-strikethrough: true;
+    -fx-text-fill: -fx-livara-muted;
+}
+
+.task-check {
+    -fx-min-width: 15px;
+    -fx-pref-width: 15px;
+    -fx-max-width: 15px;
+    -fx-min-height: 15px;
+    -fx-pref-height: 15px;
+    -fx-max-height: 15px;
+    -fx-padding: 0;
+}
+
+.task-check .box {
+    -fx-background-color: transparent;
+    -fx-background-radius: 5px;
+    -fx-border-color: -fx-livara-border-strong;
+    -fx-border-radius: 5px;
+    -fx-border-width: 1px;
+    -fx-padding: 2px;
+}
+
+.task-check:hover .box,
+.task-check:selected .box {
+    -fx-background-color: -fx-livara-accent;
+    -fx-border-color: -fx-livara-accent;
+}
+
+.task-check:selected .mark {
+    -fx-background-color: -fx-livara-background;
 }
 
 .task-number {

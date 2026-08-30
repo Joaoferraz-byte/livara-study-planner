@@ -23,6 +23,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.Separator;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
@@ -163,6 +164,12 @@ public final class StudyPlannerApp extends Application {
         HBox left = new HBox(10, brand, context);
         left.setAlignment(Pos.CENTER_LEFT);
 
+        menu.setText("");
+        Label menuIcon = new Label("⋮");
+        menuIcon.getStyleClass().add("menu-icon");
+        menu.setGraphic(menuIcon);
+        menu.setAccessibleText("Open planner menu");
+        menu.setTooltip(new Tooltip("Planner menu"));
         menu.getStyleClass().add("menu-button");
         javafx.scene.control.Menu workflowMenu = new javafx.scene.control.Menu("Workflow template");
         MenuItem activeTemplate = new MenuItem(current.workflowTemplate().label() + " (active)");
@@ -518,21 +525,28 @@ public final class StudyPlannerApp extends Application {
     }
 
     private VBox buildStudyDetails(StudySessionItem item) {
-        Label focusChip = new Label("60 min focus block");
-        Label pauseChip = new Label("15 min recovery");
+        Label focusChip = new Label("60 min study");
+        Label pauseChip = new Label("15 min pause");
         focusChip.getStyleClass().add("detail-chip");
         pauseChip.getStyleClass().addAll("detail-chip", "detail-chip-secondary");
+        focusChip.setMaxWidth(Double.MAX_VALUE);
+        pauseChip.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(focusChip, Priority.ALWAYS);
+        HBox.setHgrow(pauseChip, Priority.ALWAYS);
         HBox chips = new HBox(7, focusChip, pauseChip);
+        chips.setFillHeight(true);
         chips.getStyleClass().add("detail-chips");
 
         Label callout = new Label("Strategy  ·  " + item.focus().label() + " practice");
         callout.setWrapText(true);
         callout.getStyleClass().add("strategy-callout");
 
-        VBox tasks = new VBox(0,
-                taskRow("01", "Recall", "Recover the most important concepts without consulting notes."),
-                taskRow("02", "Practice", "Work through one representative problem or implementation."),
-                taskRow("03", "Apply", "Record one result, question, or decision for the next session."));
+        List<StudyTask> taskDefinitions = studyTasks();
+        VBox tasks = new VBox(0);
+        for (int taskIndex = 0; taskIndex < taskDefinitions.size(); taskIndex++) {
+            StudyTask task = taskDefinitions.get(taskIndex);
+            tasks.getChildren().add(taskRow(item, taskIndex + 1, task));
+        }
         tasks.getStyleClass().add("task-list");
         VBox detail = new VBox(10, chips, callout, tasks);
         detail.getStyleClass().add("item-detail");
@@ -541,19 +555,29 @@ public final class StudyPlannerApp extends Application {
         return detail;
     }
 
-    private HBox taskRow(String order, String title, String description) {
-        Label number = new Label(order);
+    private HBox taskRow(StudySessionItem item, int order, StudyTask task) {
+        String taskId = taskId(item, task);
+        CheckBox done = new CheckBox();
+        done.setSelected(progress.isCompleted(taskId) || progress.isCompleted(item.id()));
+        done.setMnemonicParsing(false);
+        done.setOnAction(event -> toggleTask(item, task, done.isSelected()));
+        done.getStyleClass().add("task-check");
+
+        Label number = new Label(String.format("%02d", order));
         number.getStyleClass().add("task-number");
-        Label taskTitle = new Label(title);
+        Label taskTitle = new Label(task.title());
         taskTitle.getStyleClass().add("task-title");
-        Label taskText = new Label(description);
+        Label taskText = new Label(task.description());
         taskText.setWrapText(true);
         taskText.getStyleClass().add("task-text");
         VBox copy = new VBox(2, taskTitle, taskText);
         HBox.setHgrow(copy, Priority.ALWAYS);
-        HBox row = new HBox(10, number, copy);
+        HBox row = new HBox(9, done, number, copy);
         row.setAlignment(Pos.TOP_LEFT);
         row.getStyleClass().add("task-row");
+        if (progress.isCompleted(taskId) || progress.isCompleted(item.id())) {
+            row.getStyleClass().add("completed");
+        }
         return row;
     }
 
@@ -601,13 +625,51 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void toggleItem(StudySessionItem item) {
-        progress = progress.toggle(item.id()).withActiveItemIndex(nextPendingIndex());
+        boolean completed = !progress.isCompleted(item.id());
+        progress = item.pause()
+                ? progress.withCompleted(item.id(), completed)
+                : setStudyBlockCompleted(item, completed);
+        progress = progress.withActiveItemIndex(nextPendingIndex());
         if (allSessionItemsCompleted()) {
             advanceCycleAutomatically();
             return;
         }
         persistProgress();
         renderSession();
+    }
+
+    private void toggleTask(StudySessionItem item, StudyTask task, boolean completed) {
+        progress = progress.withCompleted(taskId(item, task), completed);
+        boolean allTasksCompleted = studyTasks().stream()
+                .allMatch(candidate -> progress.isCompleted(taskId(item, candidate)));
+        progress = progress.withCompleted(item.id(), allTasksCompleted)
+                .withActiveItemIndex(nextPendingIndex());
+        if (allSessionItemsCompleted()) {
+            advanceCycleAutomatically();
+            return;
+        }
+        persistProgress();
+        renderSession();
+    }
+
+    private ProgressState setStudyBlockCompleted(StudySessionItem item, boolean completed) {
+        ProgressState updated = progress.withCompleted(item.id(), completed);
+        for (StudyTask task : studyTasks()) {
+            updated = updated.withCompleted(taskId(item, task), completed);
+        }
+        return updated;
+    }
+
+    private static List<StudyTask> studyTasks() {
+        return List.of(
+                new StudyTask("study", "Study", "Work through the core material with deliberate focus."),
+                new StudyTask("annotation", "Annotation", "Capture the essential ideas, questions, and connections."),
+                new StudyTask("practice", "Practice", "Work through one representative problem or implementation."),
+                new StudyTask("apply", "Apply", "Record one result, question, or decision for the next session."));
+    }
+
+    private static String taskId(StudySessionItem item, StudyTask task) {
+        return item.id() + "." + task.id();
     }
 
     private boolean allSessionItemsCompleted() {
