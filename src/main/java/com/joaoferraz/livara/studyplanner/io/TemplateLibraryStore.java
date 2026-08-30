@@ -61,6 +61,16 @@ public final class TemplateLibraryStore {
         return schedule;
     }
 
+    private ScheduleTemplate migrateDefaultCycle(String id, ScheduleTemplate schedule) {
+        if (!"default".equals(id)
+                || !schedule.hasCycle(Cycle.B)
+                || schedule.totalBlocks(Cycle.B) > 0) {
+            return schedule;
+        }
+        return schedule.withUpdatedCycle(Cycle.B,
+                DefaultScheduleFactory.create(Cycle.B, schedule.workflowTemplate()).blocks(Cycle.B));
+    }
+
     private TemplateLibrary fromRoot(Map<?, ?> root) throws IOException {
         int schemaVersion = integer(root, "schemaVersion");
         String selectedId = string(root, "selectedTemplateId");
@@ -78,7 +88,8 @@ public final class TemplateLibraryStore {
             if (!(schedule instanceof Map<?, ?>)) {
                 throw new IOException("Template entry must contain a schedule object: " + id);
             }
-            entries.add(new TemplateLibrary.Entry(id, scheduleStore.fromJson(writeJson(schedule))));
+            ScheduleTemplate loaded = scheduleStore.fromJson(writeJson(schedule));
+            entries.add(new TemplateLibrary.Entry(id, migrateDefaultCycle(id, loaded)));
         }
         try {
             return new TemplateLibrary(schemaVersion, selectedId, entries);

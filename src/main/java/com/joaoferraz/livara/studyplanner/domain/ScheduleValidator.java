@@ -16,50 +16,69 @@ public final class ScheduleValidator {
         if (template.pauseMinutes() != 15) {
             errors.add("The default study contract requires a 15-minute pause between blocks");
         }
-        if (template.totalBlocks() == 0) {
-            errors.add("The template must contain at least one study block");
+        if (template.createdCycles().isEmpty()) {
+            errors.add("The template must contain at least one study cycle");
+            return List.copyOf(errors);
+        }
+        for (Cycle cycle : template.createdCycles()) {
+            validateCycle(template, cycle, errors, cycle == template.cycle());
+        }
+        return List.copyOf(errors);
+    }
+
+    private static void validateCycle(ScheduleTemplate template, Cycle cycle,
+                                      List<String> errors, boolean active) {
+        String prefix = active ? "" : "Cycle " + cycle.label() + ": ";
+        if (template.totalBlocks(cycle) == 0) {
+            errors.add(prefix + "The cycle must contain at least one study block");
+            return;
         }
 
         Set<FocusArea> present = EnumSet.noneOf(FocusArea.class);
         for (DayOfWeek day : DayOfWeek.values()) {
             int expectedOrder = 1;
-            for (StudyBlock block : template.blocks(day)) {
+            for (StudyBlock block : template.blocks(cycle, day)) {
                 if (!block.isStandardHour() && !block.duration().equals(Duration.ofMinutes(60))) {
-                    errors.add(day + " block " + block.order() + " is not exactly 60 minutes");
+                    errors.add(prefix + day + " block " + block.order() + " is not exactly 60 minutes");
                 }
                 if (block.order() != expectedOrder++) {
-                    errors.add(day + " blocks must have contiguous order numbers");
+                    errors.add(prefix + day + " blocks must have contiguous order numbers");
                 }
                 if (block.breakAfterMinutes() != 0 && block.breakAfterMinutes() != template.pauseMinutes()) {
-                    errors.add(day + " block " + block.order() + " has an invalid break duration");
+                    errors.add(prefix + day + " block " + block.order() + " has an invalid break duration");
                 }
                 present.add(block.focus());
             }
         }
 
-        if (!present.contains(FocusArea.MARKET_PROGRAMMING)) {
-            errors.add("Market programming focus is missing");
+        requireFocus(present, FocusArea.MARKET_PROGRAMMING,
+                prefix + "Market programming focus is missing", errors);
+        requireFocus(present, FocusArea.PROJECTS,
+                prefix + "Applied projects focus is missing", errors);
+        requireFocus(present, FocusArea.LOGIC,
+                prefix + "Logic focus is missing", errors);
+        requireFocus(present, FocusArea.ARCHITECTURE,
+                prefix + "Architecture focus is missing", errors);
+        requireFocus(present, FocusArea.OPTIMIZATION,
+                prefix + "Optimization focus is missing", errors);
+        if (cycle == Cycle.A) {
+            requireFocus(present, FocusArea.PHYSICS,
+                    prefix + "Cycle A must include Physics and Biology", errors);
+            requireFocus(present, FocusArea.BIOLOGY,
+                    prefix + "Cycle A must include Physics and Biology", errors);
+        } else {
+            requireFocus(present, FocusArea.CHEMISTRY,
+                    prefix + "Cycle B must include Chemistry and Mathematics", errors);
+            requireFocus(present, FocusArea.MATHEMATICS,
+                    prefix + "Cycle B must include Chemistry and Mathematics", errors);
         }
-        if (!present.contains(FocusArea.PROJECTS)) {
-            errors.add("Applied projects focus is missing");
+    }
+
+    private static void requireFocus(Set<FocusArea> present, FocusArea focus,
+                                     String message, List<String> errors) {
+        if (!present.contains(focus) && !errors.contains(message)) {
+            errors.add(message);
         }
-        if (!present.contains(FocusArea.LOGIC)) {
-            errors.add("Logic focus is missing");
-        }
-        if (!present.contains(FocusArea.ARCHITECTURE)) {
-            errors.add("Architecture focus is missing");
-        }
-        if (!present.contains(FocusArea.OPTIMIZATION)) {
-            errors.add("Optimization focus is missing");
-        }
-        if (template.cycle() == Cycle.A) {
-            if (!present.contains(FocusArea.PHYSICS) || !present.contains(FocusArea.BIOLOGY)) {
-                errors.add("Cycle A must include Physics and Biology");
-            }
-        } else if (!present.contains(FocusArea.CHEMISTRY) || !present.contains(FocusArea.MATHEMATICS)) {
-            errors.add("Cycle B must include Chemistry and Mathematics");
-        }
-        return List.copyOf(errors);
     }
 
     public static void requireValid(ScheduleTemplate template) {

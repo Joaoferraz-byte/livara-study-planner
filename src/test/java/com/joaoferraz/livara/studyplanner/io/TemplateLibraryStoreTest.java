@@ -85,6 +85,20 @@ class TemplateLibraryStoreTest {
     }
 
     @Test
+    void repairsAnEmptyCycleBInTheDefaultTemplateOnLoad() throws Exception {
+        ScheduleTemplate original = DefaultScheduleFactory.create(Cycle.A)
+                .withAddedCycle(Cycle.B, DefaultScheduleFactory.emptyCycle());
+        TemplateLibrary library = TemplateLibrary.single("default", original);
+        TemplateLibraryStore store = new TemplateLibraryStore();
+        Path file = temporaryDirectory.resolve("default-with-empty-cycle.json");
+        store.save(file, library);
+
+        TemplateLibrary loaded = store.load(file);
+
+        assertTrue(loaded.selected().totalBlocks(Cycle.B) > 0);
+    }
+
+    @Test
     void wrapsLegacySingleScheduleDocumentsWithoutChangingTheirData() throws Exception {
         ScheduleStore scheduleStore = new ScheduleStore();
         ScheduleTemplate original = DefaultScheduleFactory.create(Cycle.B)

@@ -24,13 +24,15 @@ public final class DefaultScheduleFactory {
     }
 
     /**
-     * Creates the first editable state of a user-created template. It is
-     * intentionally valid but does not clone the seeded demonstration
-     * sequence, so the editor visibly belongs to the newly selected template.
+     * Creates the first editable state of a user-created template. It starts
+     * with a valid sequence so selecting it never persists an invalid library.
      */
     public static ScheduleTemplate createDraft(Cycle cycle) {
+        WorkflowTemplate workflow = WorkflowTemplate.MARKET_PROGRAMMING;
+        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
+        cycles.put(cycle, project(cycle, workflow));
         return ScheduleTemplate.withCycles(2, "New study template", cycle,
-                WorkflowTemplate.MARKET_PROGRAMMING, 15, Map.of());
+                workflow, 15, "layout-dashboard", cycles);
     }
 
     public static Map<DayOfWeek, List<StudyBlock>> emptyCycle() {

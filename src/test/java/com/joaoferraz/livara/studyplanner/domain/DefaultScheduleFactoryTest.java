@@ -36,13 +36,12 @@ class DefaultScheduleFactoryTest {
     }
 
     @Test
-    void newDraftStartsWithoutCyclesOrBlocks() {
+    void newDraftStartsWithAValidEditableCycle() {
         ScheduleTemplate draft = DefaultScheduleFactory.createDraft(Cycle.A);
 
-        assertTrue(draft.createdCycles().isEmpty());
-        assertEquals(0, draft.totalBlocks());
-        assertTrue(draft.sequence().isEmpty());
-        assertTrue(ScheduleValidator.validate(draft).contains("The template must contain at least one study block"));
+        assertEquals(List.of(Cycle.A), draft.createdCycles());
+        assertEquals(8, draft.totalBlocks());
+        assertTrue(ScheduleValidator.validate(draft).isEmpty());
     }
 
     @Test

@@ -16,17 +16,17 @@ class ScheduleStoreTest {
     Path temporaryDirectory;
 
     @Test
-    void preservesAUserTemplateWithNoCreatedCycles() throws Exception {
+    void persistsAndReloadsAValidDraftWithItsCreatedCycle() throws Exception {
         ScheduleStore store = new ScheduleStore();
         ScheduleTemplate original = DefaultScheduleFactory.createDraft(Cycle.A);
-        Path file = temporaryDirectory.resolve("nested/empty-template.json");
+        Path file = temporaryDirectory.resolve("nested/draft-template.json");
 
         store.save(file, original);
         ScheduleTemplate loaded = store.load(file);
 
-        assertTrue(loaded.createdCycles().isEmpty());
-        assertTrue(loaded.sequence().isEmpty());
-        assertTrue(store.toJson(loaded).contains("\"cycles\": {}"));
+        assertEquals(java.util.List.of(Cycle.A), loaded.createdCycles());
+        assertEquals(original.sequence(), loaded.sequence());
+        assertTrue(com.joaoferraz.livara.studyplanner.domain.ScheduleValidator.validate(loaded).isEmpty());
     }
 
     @Test
