@@ -752,9 +752,7 @@ public final class StudyPlannerApp extends Application {
                     TablerIcon.icon(schedule.iconId()), entry.id().equals(library.selectedTemplateId()),
                     () -> selectTemplate(entry.id()));
         }
-        addTemplateCard(templateLibrary, templateCards, "New template",
-                "Create an empty template and add cycles", TablerIcon.icon("plus"), false,
-                this::startNewTemplate);
+        addCreateTemplateButton(templateLibrary, this::startNewTemplate);
         Label libraryTitle = new Label("TEMPLATE LIBRARY");
         libraryTitle.getStyleClass().add("manager-label");
         Label libraryHint = new Label("Templates contain their own cycles, blocks, pauses and tasks. Select one to edit it below.");
@@ -1188,6 +1186,22 @@ public final class StudyPlannerApp extends Application {
         });
     }
 
+    private void addCreateTemplateButton(FlowPane library, Runnable onSelected) {
+        SVGPath plus = TablerIcon.icon("plus");
+        plus.getStyleClass().add("create-template-icon");
+        Button create = new Button();
+        create.setGraphic(plus);
+        create.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+        create.setAccessibleText("Create new template");
+        create.setTooltip(new Tooltip("Create new template"));
+        create.setMinSize(72, 72);
+        create.setPrefSize(72, 72);
+        create.setMaxSize(72, 72);
+        create.getStyleClass().add("create-template-button");
+        create.setOnAction(event -> onSelected.run());
+        library.getChildren().add(create);
+    }
+
     private void addTemplateCard(FlowPane library, List<VBox> cards, String name, String description,
                                  SVGPath icon, boolean selected, Runnable onSelected) {
         Label title = new Label(name);
@@ -1574,6 +1588,12 @@ public final class StudyPlannerApp extends Application {
     private void progressRingArc(double ratio) {
         double clamped = Math.max(0, Math.min(1, ratio));
         double targetOffset = PROGRESS_RING_CIRCUMFERENCE * (1 - clamped);
+        if (clamped == 0) {
+            progressArc.setVisible(false);
+            progressArc.setStrokeDashOffset(PROGRESS_RING_CIRCUMFERENCE);
+            return;
+        }
+        progressArc.setVisible(true);
         Timeline timeline = new Timeline(new KeyFrame(Duration.millis(360),
                 new KeyValue(progressArc.strokeDashOffsetProperty(), targetOffset, Interpolator.EASE_BOTH)));
         timeline.play();

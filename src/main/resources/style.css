@@ -1063,6 +1063,26 @@
     -fx-font-size: 9px;
     -fx-text-fill: -fx-livara-muted;
 }
+.create-template-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+.create-template-button:hover,
+.create-template-button:focused {
+    -fx-background-color: -fx-livara-accent-soft;
+    -fx-background-radius: 999px;
+}
+.create-template-icon {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-accent;
+    -fx-stroke-width: 2.25px;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+}
 
 /* Contextual editor modals: one scene-graph host, no native Popup rectangle. */
 .modal-layer {
