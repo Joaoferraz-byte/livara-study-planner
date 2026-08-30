@@ -414,7 +414,6 @@
 }
 
 .strategy-callout {
-    -fx-max-width: infinity;
     -fx-background-color: -fx-livara-accent-soft;
     -fx-background-radius: 9px;
     -fx-border-color: -fx-livara-border-strong;

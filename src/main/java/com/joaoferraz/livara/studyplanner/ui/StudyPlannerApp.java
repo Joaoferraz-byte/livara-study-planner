@@ -535,18 +535,19 @@ public final class StudyPlannerApp extends Application {
         Label pauseChip = new Label("15 min pause");
         focusChip.getStyleClass().add("detail-chip");
         pauseChip.getStyleClass().addAll("detail-chip", "detail-chip-secondary");
-        focusChip.setMaxWidth(Double.MAX_VALUE);
-        pauseChip.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(focusChip, Priority.ALWAYS);
-        HBox.setHgrow(pauseChip, Priority.ALWAYS);
         HBox chips = new HBox(7, focusChip, pauseChip);
         chips.setFillHeight(true);
+        chips.setMaxWidth(Region.USE_PREF_SIZE);
         chips.getStyleClass().add("detail-chips");
 
         Label callout = new Label("Strategy  ·  " + item.focus().label() + " practice");
         callout.setWrapText(true);
-        callout.setMaxWidth(Double.MAX_VALUE);
+        callout.setMaxWidth(Region.USE_PREF_SIZE);
         callout.getStyleClass().add("strategy-callout");
+        chips.prefWidthProperty().bind(callout.widthProperty());
+        chips.maxWidthProperty().bind(callout.widthProperty());
+        HBox.setHgrow(focusChip, Priority.ALWAYS);
+        HBox.setHgrow(pauseChip, Priority.ALWAYS);
 
         List<StudyTask> taskDefinitions = studyTasks();
         VBox tasks = new VBox(0);
