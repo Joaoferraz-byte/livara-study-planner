@@ -9,6 +9,13 @@ import com.joaoferraz.livara.studyplanner.domain.StudyBlock;
 import com.joaoferraz.livara.studyplanner.domain.WorkflowTemplate;
 import com.joaoferraz.livara.studyplanner.io.ProgressStore;
 import com.joaoferraz.livara.studyplanner.io.ScheduleStore;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.ParallelTransition;
+import javafx.animation.ScaleTransition;
+import javafx.animation.FadeTransition;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -39,6 +46,7 @@ import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.SVGPath;
 import javafx.stage.Screen;
+import javafx.util.Duration;
 import javafx.stage.Stage;
 import javafx.geometry.Rectangle2D;
 
@@ -86,6 +94,8 @@ public final class StudyPlannerApp extends Application {
     private final Arc progressArc = new Arc();
     private final Label progressRingValue = new Label();
     private final MenuButton menu = new MenuButton("Menu");
+    private SVGPath menuIcon;
+    private boolean compactLayout;
     private ScheduleTemplate current;
     private ProgressState progress;
     private List<StudySessionItem> sessionItems = List.of();
@@ -167,9 +177,11 @@ public final class StudyPlannerApp extends Application {
         left.setAlignment(Pos.CENTER_LEFT);
 
         menu.setText("");
-        SVGPath menuIcon = TablerIcon.home();
+        menuIcon = TablerIcon.home();
         menuIcon.getStyleClass().add("menu-icon");
         menu.setGraphic(menuIcon);
+        menu.setOnMouseEntered(event -> animateScale(menuIcon, compactLayout ? 0.9 : 1.12));
+        menu.setOnMouseExited(event -> animateScale(menuIcon, compactLayout ? 0.78 : 1.0));
         menu.setAccessibleText("Open planner menu");
         menu.setTooltip(new Tooltip("Planner menu"));
         menu.getStyleClass().add("menu-button");
@@ -333,7 +345,9 @@ public final class StudyPlannerApp extends Application {
         Label completedLabel = new Label("COMPLETED CYCLES");
         completedLabel.getStyleClass().add("summary-row-label");
         HBox rotationRow = summaryRow(rotationLabel, rotationValue);
+        rotationRow.getStyleClass().add("summary-divider");
         HBox completedRow = summaryRow(completedLabel, completedCyclesValue);
+        completedRow.getStyleClass().add("summary-row-plain");
         Label completionLabel = new Label("SESSION COMPLETION");
         completionLabel.getStyleClass().add("summary-row-label");
         HBox completionRow = summaryRow(completionLabel, completionSummaryValue);
@@ -412,6 +426,12 @@ public final class StudyPlannerApp extends Application {
 
     private void updateResponsiveLayout(double width) {
         boolean wide = width >= WIDE_BREAKPOINT;
+        compactLayout = !wide;
+        if (menuIcon != null) {
+            double baseScale = compactLayout ? 0.78 : 1.0;
+            menuIcon.setScaleX(baseScale);
+            menuIcon.setScaleY(baseScale);
+        }
         dashboardGrid.getStyleClass().removeAll("layout-wide", "layout-compact");
         dashboardGrid.getStyleClass().add(wide ? "layout-wide" : "layout-compact");
         dashboardGrid.getColumnConstraints().clear();
@@ -538,7 +558,10 @@ public final class StudyPlannerApp extends Application {
         CheckBox done = new CheckBox();
         done.setSelected(progress.isCompleted(item.id()));
         done.setMnemonicParsing(false);
-        done.setOnAction(event -> toggleItem(item));
+        done.setOnAction(event -> {
+            pulse(done.getGraphic());
+            toggleItem(item);
+        });
         done.getStyleClass().add(cssClass);
 
         Circle outer = new Circle(outerRadius);
@@ -548,6 +571,10 @@ public final class StudyPlannerApp extends Application {
         Circle core = new Circle(coreRadius);
         core.getStyleClass().add("check-core");
         StackPane visual = new StackPane(outer, sub, core);
+        visual.setAlignment(Pos.CENTER);
+        StackPane.setAlignment(outer, Pos.CENTER);
+        StackPane.setAlignment(sub, Pos.CENTER);
+        StackPane.setAlignment(core, Pos.CENTER);
         visual.getStyleClass().add("check-visual");
         done.setGraphic(visual);
         return done;
@@ -590,7 +617,10 @@ public final class StudyPlannerApp extends Application {
         String taskId = taskId(item, task);
         CheckBox done = checkBox(item, "task-check", 7.5, 4.7, 2.2);
         done.setSelected(progress.isCompleted(taskId) || progress.isCompleted(item.id()));
-        done.setOnAction(event -> toggleTask(item, task, done.isSelected()));
+        done.setOnAction(event -> {
+            pulse(done.getGraphic());
+            toggleTask(item, task, done.isSelected());
+        });
 
         Label taskTitle = new Label(task.title());
         taskTitle.getStyleClass().add("task-title");
@@ -622,20 +652,76 @@ public final class StudyPlannerApp extends Application {
             boolean expanded = !completed && isActive(index);
             detail.setVisible(expanded);
             detail.setManaged(expanded);
+            if (expanded) {
+                card.getStyleClass().add("expanded");
+            }
             card.setOnMouseClicked(event -> {
                 if (!(event.getTarget() instanceof CheckBox)) {
                     boolean visible = !detail.isVisible();
-                    detail.setVisible(visible);
-                    detail.setManaged(visible);
+                    animateDetails(detail, visible);
+                    card.getStyleClass().remove("expanded");
+                    if (visible) {
+                        card.getStyleClass().add("expanded");
+                    }
                 }
             });
         }
         card.setMaxWidth(Double.MAX_VALUE);
         VBox.setVgrow(card, Priority.NEVER);
+        card.setOnMouseEntered(event -> animateScale(card, 1.006));
+        card.setOnMouseExited(event -> animateScale(card, 1.0));
     }
 
     private void progressRingArc(double ratio) {
-        progressArc.setLength(-360 * Math.max(0, Math.min(1, ratio)));
+        double target = -360 * Math.max(0, Math.min(1, ratio));
+        Timeline timeline = new Timeline(new KeyFrame(Duration.millis(360),
+                new KeyValue(progressArc.lengthProperty(), target, Interpolator.EASE_BOTH)));
+        timeline.play();
+    }
+
+    private void animateScale(Node node, double scale) {
+        ScaleTransition transition = new ScaleTransition(Duration.millis(140), node);
+        transition.setToX(scale);
+        transition.setToY(scale);
+        transition.setInterpolator(Interpolator.EASE_BOTH);
+        transition.play();
+    }
+
+    private void pulse(Node node) {
+        if (node == null) {
+            return;
+        }
+        ScaleTransition pulse = new ScaleTransition(Duration.millis(180), node);
+        pulse.setFromX(0.82);
+        pulse.setFromY(0.82);
+        pulse.setToX(1.0);
+        pulse.setToY(1.0);
+        pulse.setInterpolator(Interpolator.EASE_OUT);
+        pulse.play();
+    }
+
+    private void animateDetails(Node detail, boolean visible) {
+        if (visible) {
+            detail.setManaged(true);
+            detail.setVisible(true);
+            detail.setOpacity(0);
+            detail.setScaleY(0.96);
+            FadeTransition fade = new FadeTransition(Duration.millis(180), detail);
+            fade.setToValue(1);
+            ScaleTransition scale = new ScaleTransition(Duration.millis(180), detail);
+            scale.setToY(1);
+            new ParallelTransition(fade, scale).play();
+        } else {
+            FadeTransition fade = new FadeTransition(Duration.millis(130), detail);
+            fade.setToValue(0);
+            fade.setOnFinished(event -> {
+                detail.setVisible(false);
+                detail.setManaged(false);
+                detail.setOpacity(1);
+                detail.setScaleY(1);
+            });
+            fade.play();
+        }
     }
 
     private boolean isActive(int index) {
