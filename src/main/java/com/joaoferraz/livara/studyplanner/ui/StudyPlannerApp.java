@@ -289,15 +289,11 @@ public final class StudyPlannerApp extends Application {
                 library = TemplateLibrary.single("default",
                         DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING));
             }
-            current = library.selected();
-            List<String> errors = service.validate(current);
-            if (!errors.isEmpty()) {
-                throw new IllegalArgumentException(String.join("\\n", errors));
-            }
+            boolean selectionNormalized = normalizeLoadedLibrary();
             usingLegacyProgressPath = isLegacyDefaultLibrary();
             activateSelectedTemplate();
             lastSavedLibrary = library;
-            if (!Files.exists(schedulePath)) {
+            if (selectionNormalized || !Files.exists(schedulePath)) {
                 persistSchedule();
             }
         } catch (IOException | RuntimeException exception) {
@@ -788,10 +784,16 @@ public final class StudyPlannerApp extends Application {
         List<VBox> cycleCards = new ArrayList<>();
         for (Cycle value : current.createdCycles()) {
             boolean selected = value == selectedEditorCycle;
-            VBox card = new VBox(6,
-                    new Label("Cycle " + value.label()),
-                    new Label(value.subjects()),
-                    new Label(current.totalBlocks(value) + " blocks · " + current.pauseMinutes() + " min pause"));
+            Label cycleName = new Label("Cycle " + value.label());
+            Label subjects = new Label(value.subjects());
+            Label summary = new Label(current.totalBlocks(value) + " blocks · " + current.pauseMinutes() + " min pause");
+            Button editCycle = new Button("Edit cycle");
+            editCycle.getStyleClass().add("secondary-button");
+            editCycle.setOnAction(event -> {
+                selectedEditorCycle = value;
+                showTemplatePage();
+            });
+            VBox card = new VBox(6, cycleName, subjects, summary, editCycle);
             card.getStyleClass().add("cycle-card");
             if (selected) card.getStyleClass().add("selected");
             card.setOnMouseClicked(event -> {
@@ -803,6 +805,7 @@ public final class StudyPlannerApp extends Application {
         }
         Button createCycle = new Button("Create new cycle");
         createCycle.getStyleClass().add("secondary-button");
+        createCycle.setDisable(current.createdCycles().size() >= Cycle.values().length);
         createCycle.setOnAction(event -> createCycle());
         Label cyclesTitle = new Label("CYCLES");
         cyclesTitle.getStyleClass().add("manager-label");
@@ -917,7 +920,8 @@ public final class StudyPlannerApp extends Application {
                     .filter(value -> !current.hasCycle(value))
                     .findFirst()
                     .orElseThrow(() -> new IllegalStateException("All available cycles already exist"));
-            current = current.withAddedCycle(next, DefaultScheduleFactory.emptyCycle());
+            current = current.withAddedCycle(next,
+                    DefaultScheduleFactory.create(next, current.workflowTemplate()).blocks(next));
             library = library.updateSelected(current);
             selectedEditorCycle = next;
             activateSelectedTemplate();
@@ -937,8 +941,9 @@ public final class StudyPlannerApp extends Application {
                 library = TemplateLibrary.single("default", fallback);
                 usingLegacyProgressPath = true;
             } else {
-                library = library.remove(removedId);
+                    library = library.remove(removedId);
             }
+            normalizeLoadedLibrary();
             selectedEditorCycle = null;
             activateSelectedTemplate();
             persistSchedule();
@@ -1761,6 +1766,24 @@ public final class StudyPlannerApp extends Application {
 
     private boolean isLegacyDefaultLibrary() {
         return library.entries().size() == 1 && library.selectedTemplateId().equals("default");
+    }
+
+    /** Keeps startup and post-delete transitions on a valid selected template. */
+    private boolean normalizeLoadedLibrary() {
+        current = library.selected();
+        if (service.validate(current).isEmpty()) {
+            return false;
+        }
+        for (TemplateLibrary.Entry entry : library.entries()) {
+            if (entry.id().equals("default") && service.validate(entry.schedule()).isEmpty()) {
+                library = library.select("default");
+                current = library.selected();
+                return true;
+            }
+        }
+        library = TemplateLibrary.single("default", DefaultScheduleFactory.create(Cycle.A));
+        current = library.selected();
+        return true;
     }
 
     private Path legacyProgressPath() {
