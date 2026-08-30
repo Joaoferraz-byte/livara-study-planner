@@ -23,7 +23,12 @@ import java.util.Objects;
 public final class ScheduleStore {
     public ScheduleTemplate load(Path path) throws IOException {
         Objects.requireNonNull(path, "path");
-        Object parsed = new JsonParser(Files.readString(path, StandardCharsets.UTF_8)).parse();
+        return fromJson(Files.readString(path, StandardCharsets.UTF_8));
+    }
+
+    public ScheduleTemplate fromJson(String json) throws IOException {
+        Objects.requireNonNull(json, "json");
+        Object parsed = parseJson(json);
         if (!(parsed instanceof Map<?, ?> root)) {
             throw new IOException("Schedule document root must be a JSON object");
         }
@@ -88,6 +93,10 @@ public final class ScheduleStore {
     }
 
     public String toJson(ScheduleTemplate template) {
+        return toJsonStatic(template);
+    }
+
+    static String toJsonStatic(ScheduleTemplate template) {
         StringBuilder json = new StringBuilder();
         json.append("{\n");
         field(json, "schemaVersion", Integer.toString(template.schemaVersion()), false);
@@ -138,7 +147,7 @@ public final class ScheduleStore {
         json.append(" ".repeat(spaces)).append(quote(key)).append(": ").append(value).append(",\n");
     }
 
-    private static String quote(String value) {
+    static String quote(String value) {
         StringBuilder escaped = new StringBuilder("\"");
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
@@ -177,6 +186,10 @@ public final class ScheduleStore {
             throw new IOException("Numeric field must be an integer: " + key);
         }
         return integral;
+    }
+
+    static Object parseJson(String json) throws IOException {
+        return new JsonParser(json).parse();
     }
 
     private static final class JsonParser {
