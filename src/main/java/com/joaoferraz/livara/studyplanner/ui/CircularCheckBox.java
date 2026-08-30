@@ -4,12 +4,13 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Circle;
 
 final class CircularCheckBox extends StackPane {
     private final CheckBox input = new CheckBox();
-    private final StackPane visual = new StackPane();
+    private final Pane visual = new Pane();
 
     CircularCheckBox(String cssClass, double outerRadius, double subRadius, double coreRadius) {
         getStyleClass().addAll("circular-check", cssClass);
@@ -19,15 +20,16 @@ final class CircularCheckBox extends StackPane {
         setPrefSize(outerRadius * 2, outerRadius * 2);
         setMaxSize(outerRadius * 2, outerRadius * 2);
 
-        Circle outer = circle("check-outer", outerRadius);
-        Circle sub = circle("check-subcircle", subRadius);
-        Circle core = circle("check-core", coreRadius);
+        double size = outerRadius * 2;
+        double center = size / 2;
+        Circle outer = circle("check-outer", outerRadius, center);
+        Circle sub = circle("check-subcircle", subRadius, center);
+        Circle core = circle("check-core", coreRadius, center);
         visual.getChildren().setAll(outer, sub, core);
-        visual.setAlignment(Pos.CENTER);
         visual.setMouseTransparent(true);
-        visual.setMinSize(outerRadius * 2, outerRadius * 2);
-        visual.setPrefSize(outerRadius * 2, outerRadius * 2);
-        visual.setMaxSize(outerRadius * 2, outerRadius * 2);
+        visual.setMinSize(size, size);
+        visual.setPrefSize(size, size);
+        visual.setMaxSize(size, size);
 
         input.setOpacity(0);
         input.setFocusTraversable(true);
@@ -44,8 +46,8 @@ final class CircularCheckBox extends StackPane {
         StackPane.setAlignment(input, Pos.CENTER);
     }
 
-    private static Circle circle(String styleClass, double radius) {
-        Circle circle = new Circle(radius);
+    private static Circle circle(String styleClass, double radius, double center) {
+        Circle circle = new Circle(center, center, radius);
         circle.getStyleClass().add(styleClass);
         return circle;
     }
@@ -63,7 +65,7 @@ final class CircularCheckBox extends StackPane {
         input.setOnAction(handler);
     }
 
-    StackPane visual() {
+    Pane visual() {
         return visual;
     }
 }
