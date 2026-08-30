@@ -165,14 +165,14 @@
     -fx-stroke: -fx-livara-muted;
     -fx-stroke-width: 2px;
     -fx-translate-y: 0;
-    -fx-min-width: 18px;
-    -fx-pref-width: 18px;
-    -fx-max-width: 18px;
-    -fx-min-height: 18px;
-    -fx-pref-height: 18px;
-    -fx-max-height: 18px;
+    -fx-min-width: 16px;
+    -fx-pref-width: 16px;
+    -fx-max-width: 16px;
+    -fx-min-height: 16px;
+    -fx-pref-height: 16px;
+    -fx-max-height: 16px;
     -fx-alignment: CENTER;
-    -fx-font-size: 18px;
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
     -fx-text-fill: -fx-livara-muted;
 }
@@ -1030,4 +1030,63 @@
 .template-card-hint {
     -fx-font-size: 9px;
     -fx-text-fill: -fx-livara-muted;
+}
+
+/* Contextual editor popups: transparent window root, themed panel, no legacy white corners. */
+.popup-root {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 1px;
+}
+.editor-popup {
+    -fx-background-color: -fx-livara-surface-raised;
+    -fx-background-insets: 0;
+    -fx-background-radius: 14px;
+    -fx-border-color: -fx-livara-border-strong;
+    -fx-border-insets: 0;
+    -fx-border-radius: 14px;
+    -fx-border-width: 1px;
+    -fx-padding: 18px;
+    -fx-min-width: 330px;
+    -fx-max-width: 420px;
+}
+.editor-popup > .label {
+    -fx-text-fill: -fx-livara-muted;
+}
+.editor-popup .popup-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-text;
+    -fx-padding: 0 0 5px 0;
+}
+.editor-popup .popup-field,
+.editor-popup .text-field,
+.editor-popup .combo-box,
+.editor-popup .spinner {
+    -fx-background-color: -fx-livara-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 8px;
+    -fx-border-color: -fx-livara-border;
+    -fx-border-insets: 0;
+    -fx-border-radius: 8px;
+    -fx-text-fill: -fx-livara-text;
+}
+.editor-popup .button-bar {
+    -fx-alignment: center;
+    -fx-padding: 8px 0 0 0;
+}
+.editor-popup .button-bar .button {
+    -fx-min-width: 112px;
+}
+
+.manager-order-label {
+    -fx-font-family: "Monospace";
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-min-width: 18px;
+    -fx-pref-width: 18px;
+    -fx-max-width: 18px;
+    -fx-padding: 0;
+    -fx-text-fill: -fx-livara-accent;
+    -fx-alignment: TOP_LEFT;
 }

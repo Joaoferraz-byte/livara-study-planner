@@ -52,6 +52,7 @@ import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.SVGPath;
+import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Popup;
 import javafx.stage.Screen;
@@ -116,7 +117,7 @@ public final class StudyPlannerApp extends Application {
     private ScheduleTemplate current;
 
     private static final class BlockEditorRow {
-        private final DayOfWeek day;
+        private int order;
         private final ComboBox<FocusArea> focus;
         private final TextField topic;
         private final Spinner<Integer> duration;
@@ -129,8 +130,8 @@ public final class StudyPlannerApp extends Application {
         private boolean expanded;
         private Runnable editAction = () -> { };
 
-        private BlockEditorRow(DayOfWeek day, StudyBlock block, Runnable removeAction) {
-            this.day = day;
+        private BlockEditorRow(int order, StudyBlock block, Runnable removeAction) {
+            this.order = order;
             this.focus = new ComboBox<>();
             this.focus.getItems().addAll(FocusArea.values());
             this.focus.setConverter(new StringConverter<>() {
@@ -143,8 +144,8 @@ public final class StudyPlannerApp extends Application {
                     (int) block.duration().toMinutes(), 15));
             this.pause = new Spinner<>(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 60,
                     block.breakAfterMinutes(), 15));
-            Label dayLabel = new Label(day.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH).toUpperCase());
-            dayLabel.getStyleClass().add("manager-day-label");
+            Label dayLabel = new Label(order + ".");
+            dayLabel.getStyleClass().add("manager-order-label");
             focusSummary = new Label();
             focusSummary.getStyleClass().add("block-card-focus");
             topicSummary = new Label();
@@ -159,7 +160,12 @@ public final class StudyPlannerApp extends Application {
             Button remove = new Button("Remove");
             remove.getStyleClass().add("danger-button");
             remove.setOnAction(event -> removeAction.run());
-            HBox identity = new HBox(10, dayLabel, summary, timingSummary, edit, remove);
+            StackPane orderSlot = new StackPane(dayLabel);
+            orderSlot.setMinWidth(18);
+            orderSlot.setPrefWidth(18);
+            orderSlot.setMaxWidth(18);
+            orderSlot.setAlignment(Pos.TOP_LEFT);
+            HBox identity = new HBox(6, orderSlot, summary, timingSummary, edit, remove);
             identity.setAlignment(Pos.CENTER_LEFT);
             properties = new VBox(5);
             properties.getStyleClass().add("block-card-details");
@@ -177,6 +183,10 @@ public final class StudyPlannerApp extends Application {
 
         private void setEditAction(Runnable action) {
             editAction = action;
+        }
+
+        private void setOrder(int value) {
+            order = value;
         }
 
         private void refreshSummary() {
@@ -303,8 +313,18 @@ public final class StudyPlannerApp extends Application {
         HBox left = new HBox(10, brand, context);
         left.setAlignment(Pos.CENTER_LEFT);
 
+        Button homeButton = new Button();
+        SVGPath homeIcon = TablerIcon.home();
+        homeIcon.getStyleClass().add("menu-icon");
+        homeButton.setGraphic(homeIcon);
+        homeButton.setFocusTraversable(false);
+        homeButton.setAccessibleText("Open dashboard");
+        homeButton.setTooltip(new Tooltip("Dashboard"));
+        homeButton.getStyleClass().add("menu-button");
+        homeButton.setOnAction(event -> showDashboardPage());
+
         menu.setText("");
-        menuIcon = TablerIcon.home();
+        menuIcon = TablerIcon.menu2();
         menuIcon.getStyleClass().add("menu-icon");
         menu.setGraphic(menuIcon);
         menu.setOnMouseEntered(event -> animateScale(menuIcon, compactLayout ? 0.9 : 1.12));
@@ -336,7 +356,7 @@ public final class StudyPlannerApp extends Application {
         });
 
         Button manage = new Button();
-        manageIcon = TablerIcon.settings();
+        manageIcon = TablerIcon.edit();
         manageIcon.getStyleClass().add("menu-icon");
         manage.setGraphic(manageIcon);
         manage.setFocusTraversable(false);
@@ -346,7 +366,7 @@ public final class StudyPlannerApp extends Application {
         manage.setOnAction(event -> showTemplatePage());
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox actions = new HBox(8, manage, menu);
+        HBox actions = new HBox(8, manage, homeButton, menu);
         actions.setAlignment(Pos.CENTER);
         actions.setMinHeight(28);
         actions.setPrefHeight(28);
@@ -669,29 +689,19 @@ public final class StudyPlannerApp extends Application {
         VBox blockEditor = new VBox(6);
         blockEditor.getStyleClass().add("block-editor");
         List<BlockEditorRow> blockRows = new ArrayList<>();
-        for (DayOfWeek day : DayOfWeek.values()) {
-            for (StudyBlock block : current.blocks(day)) {
-                addBlockEditorRow(blockEditor, blockRows, day, block);
-            }
+        int initialOrder = 1;
+        for (StudyBlock block : current.sequence()) {
+            addBlockEditorRow(blockEditor, blockRows, initialOrder++, block);
         }
-        ComboBox<DayOfWeek> addDay = new ComboBox<>();
-        addDay.getItems().addAll(DayOfWeek.values());
-        addDay.setConverter(new StringConverter<>() {
-            @Override public String toString(DayOfWeek value) {
-                return value == null ? "" : value.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
-            }
-            @Override public DayOfWeek fromString(String value) { return DayOfWeek.MONDAY; }
-        });
-        addDay.setValue(DayOfWeek.MONDAY);
         Button addBlock = new Button("Add block");
         addBlock.getStyleClass().add("secondary-button");
-        addBlock.setOnAction(event -> showAddBlockPopup(blockEditor, blockRows, addDay.getValue(),
+        addBlock.setOnAction(event -> showAddBlockPopup(blockEditor, blockRows,
                 new StudyBlock(blockRows.size() + 1, FocusArea.MARKET_PROGRAMMING,
                         "New focus block", java.time.Duration.ofMinutes(60), pause.getValue())));
-        HBox blockTools = new HBox(8, new Label("ADD TO"), addDay, addBlock);
-        blockTools.setAlignment(Pos.CENTER_LEFT);
+        HBox blockTools = new HBox(addBlock);
+        blockTools.setAlignment(Pos.CENTER_RIGHT);
         blockTools.getStyleClass().add("block-editor-tools");
-        Label blocksTitle = new Label("BLOCKS & PROPERTIES");
+        Label blocksTitle = new Label("STUDY SEQUENCE");
         blocksTitle.getStyleClass().add("manager-label");
         VBox blockSection = new VBox(7, blocksTitle, blockEditor, blockTools);
         blockSection.getStyleClass().add("block-editor-section");
@@ -736,7 +746,7 @@ public final class StudyPlannerApp extends Application {
             }
         });
 
-        Button remove = new Button("Remove active template");
+        Button remove = new Button("Delete template");
         remove.getStyleClass().add("danger-button");
         remove.setOnAction(event -> {
             try {
@@ -748,14 +758,14 @@ public final class StudyPlannerApp extends Application {
                 persistProgress();
                 expandedItemId = null;
                 renderSession();
-                statusLabel.setText("Active template removed; default restored.");
+                statusLabel.setText("Template deleted; default restored.");
                 showDashboardPage();
             } catch (IOException | RuntimeException exception) {
-                showError("Unable to remove template", exception.getMessage());
+                showError("Unable to delete template", exception.getMessage());
             }
         });
 
-        HBox actions = new HBox(9, remove, new Region(), create, save);
+        HBox actions = new HBox(9, new Region(), create, save);
         HBox.setHgrow(actions.getChildren().get(1), Priority.ALWAYS);
         actions.setAlignment(Pos.CENTER_LEFT);
         actions.getStyleClass().add("manager-actions");
@@ -774,9 +784,15 @@ public final class StudyPlannerApp extends Application {
         templateLibrary.getStyleClass().add("template-library");
         List<VBox> templateCards = new ArrayList<>();
         addTemplateCard(templateLibrary, templateCards, current.name(),
-                "Complete study system · " + current.totalBlocks() + " blocks", TablerIcon.icon(current.iconId()), true);
+                "Complete study system · " + current.totalBlocks() + " blocks", TablerIcon.icon(current.iconId()), true,
+                () -> showTemplatePage());
         addTemplateCard(templateLibrary, templateCards, "New template",
-                "Start a complete study system", TablerIcon.bookmark(), false);
+                "Start a complete study system", TablerIcon.bookmark(), false,
+                () -> {
+                    current = DefaultScheduleFactory.create(Cycle.A, WorkflowTemplate.MARKET_PROGRAMMING);
+                    progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+                    showTemplatePage();
+                });
         Label libraryTitle = new Label("TEMPLATE LIBRARY");
         libraryTitle.getStyleClass().add("manager-label");
         Label libraryHint = new Label("Templates contain their cycles, blocks, pauses and tasks. Select one to edit it below.");
@@ -799,6 +815,10 @@ public final class StudyPlannerApp extends Application {
         HBox identityBody = new HBox(12, identitySummary, editIdentity);
         identityBody.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(identitySummary, Priority.ALWAYS);
+        Button deleteTemplate = new Button("Delete template");
+        deleteTemplate.getStyleClass().add("danger-button");
+        deleteTemplate.setOnAction(remove.getOnAction());
+        identityBody.getChildren().add(deleteTemplate);
         VBox detailsHeading = new VBox(2, detailsTitle, detailsHint);
         VBox detailsSection = new VBox(8, detailsHeading, identityBody);
         detailsSection.getStyleClass().add("manager-section");
@@ -851,7 +871,8 @@ public final class StudyPlannerApp extends Application {
         Button apply = new Button("Apply details");
         apply.getStyleClass().add("primary-button");
         HBox actions = new HBox(8, cancel, apply);
-        actions.setAlignment(Pos.CENTER_RIGHT);
+        actions.setAlignment(Pos.CENTER);
+        actions.setMaxWidth(Double.MAX_VALUE);
         panel.getChildren().setAll(title, new Label("Name"), nameCopy, new Label("Cycle"), cycleCopy,
                 new Label("Workflow"), workflowCopy, new Label("Pause"), pauseCopy, new Label("Icon"), iconCopy, actions);
         Popup popup = new Popup();
@@ -868,6 +889,7 @@ public final class StudyPlannerApp extends Application {
             popup.hide();
         });
         popup.setOnShown(event -> {
+            if (popup.getScene() != null) popup.getScene().setFill(Color.TRANSPARENT);
             javafx.geometry.Point2D point = anchor.localToScreen(0, anchor.getLayoutBounds().getHeight() + 8);
             popup.setX(point.getX());
             popup.setY(point.getY());
@@ -885,7 +907,8 @@ public final class StudyPlannerApp extends Application {
         Button cancel = new Button("Cancel");
         cancel.getStyleClass().add("secondary-button");
         HBox actions = new HBox(8, cancel, apply);
-        actions.setAlignment(Pos.CENTER_RIGHT);
+        actions.setAlignment(Pos.CENTER);
+        actions.setMaxWidth(Double.MAX_VALUE);
         panel.getChildren().setAll(title, new Label("Focus"), row.focus, new Label("Topic"), row.topic,
                 new Label("Focus minutes"), row.duration, new Label("Break after"), row.pause, actions);
         Popup popup = new Popup();
@@ -897,15 +920,17 @@ public final class StudyPlannerApp extends Application {
             popup.hide();
         });
         popup.setOnShown(event -> {
-            javafx.geometry.Point2D point = row.row.localToScreen(30, 30);
+            if (popup.getScene() != null) popup.getScene().setFill(Color.TRANSPARENT);
+            javafx.geometry.Point2D point = row.row.localToScreen(
+                    Math.max(18, row.row.getLayoutBounds().getWidth() / 2 - 165), 26);
             popup.setX(point.getX());
             popup.setY(point.getY());
         });
         popup.show(row.row.getScene().getWindow(), 0, 0);
     }
 
-    private void showAddBlockPopup(VBox editor, List<BlockEditorRow> rows, DayOfWeek day, StudyBlock defaults) {
-        BlockEditorRow draft = new BlockEditorRow(day, defaults, () -> { });
+    private void showAddBlockPopup(VBox editor, List<BlockEditorRow> rows, StudyBlock defaults) {
+        BlockEditorRow draft = new BlockEditorRow(rows.size() + 1, defaults, () -> { });
         VBox panel = new VBox(10);
         panel.getStyleClass().add("editor-popup");
         Label title = new Label("Add study block");
@@ -915,7 +940,8 @@ public final class StudyPlannerApp extends Application {
         Button add = new Button("Add block");
         add.getStyleClass().add("primary-button");
         HBox actions = new HBox(8, cancel, add);
-        actions.setAlignment(Pos.CENTER_RIGHT);
+        actions.setAlignment(Pos.CENTER);
+        actions.setMaxWidth(Double.MAX_VALUE);
         panel.getChildren().setAll(title, new Label("Focus"), draft.focus, new Label("Topic"), draft.topic,
                 new Label("Focus minutes"), draft.duration, new Label("Break after"), draft.pause, actions);
         Popup popup = new Popup();
@@ -930,6 +956,7 @@ public final class StudyPlannerApp extends Application {
             popup.hide();
         });
         popup.setOnShown(event -> {
+            if (popup.getScene() != null) popup.getScene().setFill(Color.TRANSPARENT);
             javafx.geometry.Point2D point = add.localToScreen(0, add.getLayoutBounds().getHeight() + 8);
             popup.setX(point.getX());
             popup.setY(point.getY());
@@ -938,7 +965,7 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void addTemplateCard(FlowPane library, List<VBox> cards, String name, String description,
-                                 SVGPath icon, boolean selected) {
+                                 SVGPath icon, boolean selected, Runnable onSelected) {
         Label title = new Label(name);
         title.getStyleClass().add("template-card-title");
         Label hint = new Label(description);
@@ -963,14 +990,15 @@ public final class StudyPlannerApp extends Application {
             snap.setToY(1);
             snap.setInterpolator(Interpolator.EASE_OUT);
             snap.play();
+            onSelected.run();
         });
         cards.add(card);
         library.getChildren().add(card);
     }
 
-    private void addBlockEditorRow(VBox editor, List<BlockEditorRow> rows, DayOfWeek day, StudyBlock block) {
+    private void addBlockEditorRow(VBox editor, List<BlockEditorRow> rows, int order, StudyBlock block) {
         final BlockEditorRow[] holder = new BlockEditorRow[1];
-        holder[0] = new BlockEditorRow(day, block, () -> {
+        holder[0] = new BlockEditorRow(order, block, () -> {
             rows.remove(holder[0]);
             editor.getChildren().remove(holder[0].row);
         });
@@ -984,18 +1012,14 @@ public final class StudyPlannerApp extends Application {
         if (rows.isEmpty()) {
             throw new IllegalArgumentException("A template needs at least one study block");
         }
-        EnumMap<DayOfWeek, List<StudyBlock>> days = new EnumMap<>(DayOfWeek.class);
-        for (DayOfWeek day : DayOfWeek.values()) {
-            List<StudyBlock> dayBlocks = new ArrayList<>();
-            int order = 1;
-            for (BlockEditorRow row : rows) {
-                if (row.day == day) {
-                    StudyBlock edited = row.toBlock(order++);
-                    dayBlocks.add(new StudyBlock(edited.order(), edited.focus(), edited.topic(), edited.duration(), pauseMinutes));
-                }
-            }
-            days.put(day, dayBlocks);
+        List<StudyBlock> sequence = new ArrayList<>();
+        int order = 1;
+        for (BlockEditorRow row : rows) {
+            row.setOrder(order);
+            StudyBlock edited = row.toBlock(order++);
+            sequence.add(new StudyBlock(edited.order(), edited.focus(), edited.topic(), edited.duration(), pauseMinutes));
         }
+        Map<DayOfWeek, List<StudyBlock>> days = projectSequence(sequence, current.blocks(current.cycle()));
         EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
         for (Cycle value : Cycle.values()) {
             cycles.put(value, value == current.cycle() ? days : current.blocks(value));
@@ -1006,6 +1030,29 @@ public final class StudyPlannerApp extends Application {
             throw new IllegalArgumentException(String.join("\\n", errors));
         }
         return edited;
+    }
+
+    private Map<DayOfWeek, List<StudyBlock>> projectSequence(List<StudyBlock> sequence,
+                                                               Map<DayOfWeek, List<StudyBlock>> previous) {
+        EnumMap<DayOfWeek, List<StudyBlock>> result = new EnumMap<>(DayOfWeek.class);
+        int cursor = 0;
+        for (DayOfWeek day : DayOfWeek.values()) {
+            List<StudyBlock> blocks = new ArrayList<>();
+            int slots = previous.getOrDefault(day, List.of()).size();
+            for (int index = 0; index < slots && cursor < sequence.size(); index++) {
+                StudyBlock source = sequence.get(cursor++);
+                blocks.add(new StudyBlock(blocks.size() + 1, source.focus(), source.topic(), source.duration(), source.breakAfterMinutes()));
+            }
+            result.put(day, blocks);
+        }
+        List<StudyBlock> overflow = result.get(DayOfWeek.SATURDAY);
+        while (cursor < sequence.size()) {
+            StudyBlock source = sequence.get(cursor++);
+            overflow = new ArrayList<>(overflow);
+            overflow.add(new StudyBlock(overflow.size() + 1, source.focus(), source.topic(), source.duration(), source.breakAfterMinutes()));
+            result.put(DayOfWeek.SATURDAY, overflow);
+        }
+        return result;
     }
 
     private void showDashboardPage() {
