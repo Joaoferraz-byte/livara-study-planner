@@ -23,7 +23,6 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
@@ -512,7 +511,7 @@ public final class StudyPlannerApp extends Application {
     }
 
     private VBox studyCard(StudySessionItem item, int index) {
-        CheckBox done = checkBox(item, "item-check", 10, 6.2, 3.1);
+        CircularCheckBox done = checkBox(item, "item-check", 10, 6.2, 3.1);
         Label title = new Label(item.title());
         title.getStyleClass().add("item-title");
         Label subtitle = new Label(item.subtitle());
@@ -536,7 +535,7 @@ public final class StudyPlannerApp extends Application {
     }
 
     private VBox pauseCard(StudySessionItem item, int index) {
-        CheckBox done = checkBox(item, "item-check", 10, 6.2, 3.1);
+        CircularCheckBox done = checkBox(item, "item-check", 10, 6.2, 3.1);
         Label title = new Label("Recovery pause");
         title.getStyleClass().add("pause-title");
         Label subtitle = new Label("Step away, hydrate, and return with intention");
@@ -553,30 +552,14 @@ public final class StudyPlannerApp extends Application {
         return card;
     }
 
-    private CheckBox checkBox(StudySessionItem item, String cssClass,
-                              double outerRadius, double subRadius, double coreRadius) {
-        CheckBox done = new CheckBox();
+    private CircularCheckBox checkBox(StudySessionItem item, String cssClass,
+                                      double outerRadius, double subRadius, double coreRadius) {
+        CircularCheckBox done = new CircularCheckBox(cssClass, outerRadius, subRadius, coreRadius);
         done.setSelected(progress.isCompleted(item.id()));
-        done.setMnemonicParsing(false);
         done.setOnAction(event -> {
-            pulse(done.getGraphic());
+            pulse(done.visual());
             toggleItem(item);
         });
-        done.getStyleClass().add(cssClass);
-
-        Circle outer = new Circle(outerRadius);
-        outer.getStyleClass().add("check-outer");
-        Circle sub = new Circle(subRadius);
-        sub.getStyleClass().add("check-subcircle");
-        Circle core = new Circle(coreRadius);
-        core.getStyleClass().add("check-core");
-        StackPane visual = new StackPane(outer, sub, core);
-        visual.setAlignment(Pos.CENTER);
-        StackPane.setAlignment(outer, Pos.CENTER);
-        StackPane.setAlignment(sub, Pos.CENTER);
-        StackPane.setAlignment(core, Pos.CENTER);
-        visual.getStyleClass().add("check-visual");
-        done.setGraphic(visual);
         return done;
     }
 
@@ -615,10 +598,10 @@ public final class StudyPlannerApp extends Application {
 
     private HBox taskRow(StudySessionItem item, StudyTask task) {
         String taskId = taskId(item, task);
-        CheckBox done = checkBox(item, "task-check", 7.5, 4.7, 2.2);
+        CircularCheckBox done = checkBox(item, "task-check", 7.5, 4.7, 2.2);
         done.setSelected(progress.isCompleted(taskId) || progress.isCompleted(item.id()));
         done.setOnAction(event -> {
-            pulse(done.getGraphic());
+            pulse(done.visual());
             toggleTask(item, task, done.isSelected());
         });
 
@@ -656,7 +639,7 @@ public final class StudyPlannerApp extends Application {
                 card.getStyleClass().add("expanded");
             }
             card.setOnMouseClicked(event -> {
-                if (!(event.getTarget() instanceof CheckBox)) {
+                if (!(event.getTarget() instanceof CircularCheckBox)) {
                     boolean visible = !detail.isVisible();
                     animateDetails(detail, visible);
                     card.getStyleClass().remove("expanded");
