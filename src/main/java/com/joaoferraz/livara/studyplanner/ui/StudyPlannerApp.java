@@ -25,6 +25,9 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -39,6 +42,7 @@ import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.Separator;
 import javafx.scene.layout.BorderPane;
@@ -55,7 +59,6 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.SVGPath;
 import javafx.scene.paint.Color;
 import javafx.stage.Modality;
-import javafx.stage.Popup;
 import javafx.stage.PopupWindow;
 import javafx.stage.Screen;
 import javafx.stage.Window;
@@ -77,6 +80,7 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.function.UnaryOperator;
+import javafx.event.EventHandler;
 
 public final class StudyPlannerApp extends Application {
     private static final Pattern COLOR = Pattern.compile("\\\"%s\\\"\\s*:\\s*\\\"(#[0-9a-fA-F]{6})\\\"");
@@ -127,6 +131,8 @@ public final class StudyPlannerApp extends Application {
     private TemplateLibrary library;
     private TemplateLibrary lastSavedLibrary;
     private Cycle selectedEditorCycle;
+    private final StackPane modalLayer = new StackPane();
+    private EventHandler<KeyEvent> modalEscapeHandler;
 
     private static final class BlockEditorRow {
         private int order;
@@ -317,7 +323,12 @@ public final class StudyPlannerApp extends Application {
         shell.getStyleClass().add("dashboard-shell");
         VBox.setVgrow(mainViewHost, Priority.ALWAYS);
         contentRoot.setCenter(shell);
-        sceneRoot.getChildren().addAll(ambient, contentRoot);
+        modalLayer.getStyleClass().add("modal-layer");
+        modalLayer.setVisible(false);
+        modalLayer.setManaged(false);
+        modalLayer.setPickOnBounds(true);
+        StackPane.setAlignment(modalLayer, Pos.CENTER);
+        sceneRoot.getChildren().addAll(ambient, contentRoot, modalLayer);
 
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
         double initialWidth = Math.min(1240, Math.max(720, bounds.getWidth() - 40));
@@ -940,40 +951,6 @@ public final class StudyPlannerApp extends Application {
         }
     }
 
-    private StackPane popupRoot(Node panel) {
-        StackPane root = new StackPane(panel);
-        root.getStyleClass().add("popup-root");
-        root.setPadding(Insets.EMPTY);
-        return root;
-    }
-
-    private void stylePopupScene(Popup popup) {
-        if (popup.getScene() == null) {
-            return;
-        }
-        Scene scene = popup.getScene();
-        scene.setFill(Color.TRANSPARENT);
-        Node root = scene.getRoot();
-        if (!root.getStyleClass().contains("root")) {
-            root.getStyleClass().add("root");
-        }
-        if (!root.getStyleClass().contains("popup")) {
-            root.getStyleClass().add("popup");
-        }
-        applyMatugenPalette(root);
-        String stylesheet = Objects.requireNonNull(getClass().getResource("/style.css"),
-                "style.css resource is missing").toExternalForm();
-        if (!scene.getStylesheets().contains(stylesheet)) {
-            scene.getStylesheets().add(stylesheet);
-        }
-        // ComboBox/Spinner skins create child PopupWindows after the editor
-        // scene is shown. Reapply the same palette after that child window is
-        // materialized, otherwise JavaFX falls back to its default white root.
-        scene.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED,
-                event -> Platform.runLater(() -> styleOwnedPopupWindows(scene.getWindow(), stylesheet)));
-        Platform.runLater(() -> styleOwnedPopupWindows(scene.getWindow(), stylesheet));
-    }
-
     private void styleOwnedPopupWindows(Window owner, String stylesheet) {
         for (Window window : Window.getWindows()) {
             if (!(window instanceof PopupWindow popupWindow)
@@ -997,23 +974,122 @@ public final class StudyPlannerApp extends Application {
         }
     }
 
+    private StackPane showModal(VBox panel) {
+        panel.getStyleClass().add("editor-modal");
+        StackPane backdrop = new StackPane(panel);
+        backdrop.getStyleClass().add("modal-backdrop");
+        backdrop.setPickOnBounds(true);
+        StackPane.setAlignment(panel, Pos.CENTER);
+        backdrop.setOnMouseClicked(event -> {
+            if (event.getTarget() == backdrop) {
+                closeModal(backdrop);
+            }
+        });
+        modalLayer.getChildren().setAll(backdrop);
+        modalLayer.setManaged(true);
+        modalLayer.setVisible(true);
+        modalLayer.toFront();
+        Scene scene = primaryStage.getScene();
+        modalEscapeHandler = event -> {
+            if (event.getCode() == KeyCode.ESCAPE) {
+                closeModal(backdrop);
+                event.consume();
+            }
+        };
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, modalEscapeHandler);
+        Platform.runLater(() -> panel.requestFocus());
+        return backdrop;
+    }
+
+    private void closeModal(StackPane backdrop) {
+        if (!modalLayer.getChildren().remove(backdrop)) {
+            return;
+        }
+        if (modalEscapeHandler != null && primaryStage.getScene() != null) {
+            primaryStage.getScene().removeEventFilter(KeyEvent.KEY_PRESSED, modalEscapeHandler);
+            modalEscapeHandler = null;
+        }
+        modalLayer.setVisible(false);
+        modalLayer.setManaged(false);
+    }
+
+    private Button modalCloseButton(StackPane[] modal) {
+        Button close = new Button();
+        close.setGraphic(TablerIcon.icon("x"));
+        close.setAccessibleText("Close");
+        close.getStyleClass().add("modal-close-button");
+        close.setOnAction(event -> closeModal(modal[0]));
+        return close;
+    }
+
+    private HBox modalHeader(String titleText, StackPane[] modal) {
+        Label title = new Label(titleText);
+        title.getStyleClass().add("popup-title");
+        HBox header = new HBox(title, new Region());
+        HBox.setHgrow(header.getChildren().get(1), Priority.ALWAYS);
+        header.getChildren().add(modalCloseButton(modal));
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.getStyleClass().add("modal-header");
+        return header;
+    }
+
+    private Button iconButton(String iconId) {
+        Button button = new Button();
+        button.setGraphic(iconGraphic(iconId));
+        button.setAccessibleText("Selected icon " + iconId);
+        button.getStyleClass().add("icon-choice-current");
+        return button;
+    }
+
+    private SVGPath iconGraphic(String iconId) {
+        SVGPath graphic = TablerIcon.icon(iconId);
+        graphic.getStyleClass().add("icon-choice-graphic");
+        return graphic;
+    }
+
+    private FlowPane iconPicker(ComboBox<String> icon, Button currentIcon) {
+        FlowPane grid = new FlowPane();
+        grid.setHgap(8);
+        grid.setVgap(8);
+        grid.getStyleClass().add("icon-picker-grid");
+        for (String iconId : icon.getItems()) {
+            Button choice = new Button(iconId.replace('-', ' '));
+            choice.setGraphic(iconGraphic(iconId));
+            choice.setTooltip(new Tooltip(iconId));
+            choice.getStyleClass().add("icon-choice");
+            choice.setOnAction(event -> {
+                icon.setValue(iconId);
+                currentIcon.setGraphic(iconGraphic(iconId));
+                currentIcon.setAccessibleText("Selected icon " + iconId);
+                grid.setVisible(false);
+                grid.setManaged(false);
+            });
+            grid.getChildren().add(choice);
+        }
+        return grid;
+    }
+
     private void showIdentityPopup(Node anchor, TextField name,
                                    ComboBox<WorkflowTemplate> workflow, TextField pause,
                                    ComboBox<String> icon, Runnable refresh) {
-        VBox panel = new VBox(10);
-        panel.getStyleClass().add("editor-popup");
-        Label title = new Label("Edit template identity");
-        title.getStyleClass().add("popup-title");
+        StackPane[] modal = new StackPane[1];
+        VBox panel = new VBox(16);
+        Button currentIcon = iconButton(icon.getValue());
+        FlowPane iconGrid = iconPicker(icon, currentIcon);
+        iconGrid.setVisible(false);
+        iconGrid.setManaged(false);
+        currentIcon.setOnAction(event -> {
+            iconGrid.setManaged(!iconGrid.isManaged());
+            iconGrid.setVisible(iconGrid.isManaged());
+        });
         TextField nameCopy = new TextField(name.getText());
         nameCopy.setPromptText("Template name");
+        nameCopy.deselect();
         ComboBox<WorkflowTemplate> workflowCopy = new ComboBox<>();
         workflowCopy.getItems().addAll(WorkflowTemplate.values());
         workflowCopy.setValue(workflow.getValue());
         TextField pauseCopy = numericField(pause.getText());
-        ComboBox<String> iconCopy = new ComboBox<>();
-        iconCopy.getItems().addAll(icon.getItems());
-        iconCopy.setValue(icon.getValue());
-        for (Node node : List.of(nameCopy, workflowCopy, pauseCopy, iconCopy)) {
+        for (Node node : List.of(nameCopy, workflowCopy, pauseCopy, currentIcon)) {
             node.getStyleClass().add("popup-field");
             if (node instanceof Control control) control.setMaxWidth(Double.MAX_VALUE);
         }
@@ -1021,103 +1097,72 @@ public final class StudyPlannerApp extends Application {
         cancel.getStyleClass().add("secondary-button");
         Button apply = new Button("Apply details");
         apply.getStyleClass().add("primary-button");
-        HBox actions = new HBox(8, cancel, apply);
-        actions.setAlignment(Pos.CENTER);
-        actions.setMaxWidth(Double.MAX_VALUE);
-        panel.getChildren().setAll(title, new Label("Name"), nameCopy,
+        HBox actions = new HBox(10, cancel, apply);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        panel.getChildren().setAll(new Region(), new Label("Name"), nameCopy,
                 new Label("Workflow"), workflowCopy, new Label("Pause minutes"), pauseCopy,
-                new Label("Icon"), iconCopy, actions);
-        Popup popup = new Popup();
-        popup.setAutoHide(true);
-        popup.getContent().add(popupRoot(panel));
-        cancel.setOnAction(event -> popup.hide());
+                new Label("Icon"), currentIcon, iconGrid, actions);
+        modal[0] = showModal(panel);
+        panel.getChildren().set(0, modalHeader("Edit template identity", modal));
+        Platform.runLater(nameCopy::deselect);
+        cancel.setOnAction(event -> closeModal(modal[0]));
         apply.setOnAction(event -> {
             try {
                 parsePauseMinutes(pauseCopy.getText());
                 name.setText(nameCopy.getText());
                 workflow.setValue(workflowCopy.getValue());
                 pause.setText(pauseCopy.getText());
-                icon.setValue(iconCopy.getValue());
+                icon.setValue(icon.getValue());
                 refresh.run();
-                popup.hide();
+                closeModal(modal[0]);
             } catch (RuntimeException exception) {
                 showError("Unable to apply details", exception.getMessage());
             }
         });
-        popup.setOnShown(event -> {
-            stylePopupScene(popup);
-            javafx.geometry.Point2D point = anchor.localToScreen(0, anchor.getLayoutBounds().getHeight() + 8);
-            popup.setX(point.getX());
-            popup.setY(point.getY());
-        });
-        popup.show(anchor.getScene().getWindow(), 0, 0);
     }
 
     private void showBlockEditorPopup(BlockEditorRow row) {
-        VBox panel = new VBox(10);
-        panel.getStyleClass().add("editor-popup");
-        Label title = new Label("Edit study block");
-        title.getStyleClass().add("popup-title");
+        StackPane[] modal = new StackPane[1];
+        VBox panel = new VBox(16);
         Button apply = new Button("Apply block");
         apply.getStyleClass().add("primary-button");
         Button cancel = new Button("Cancel");
         cancel.getStyleClass().add("secondary-button");
-        HBox actions = new HBox(8, cancel, apply);
-        actions.setAlignment(Pos.CENTER);
-        actions.setMaxWidth(Double.MAX_VALUE);
-        panel.getChildren().setAll(title, new Label("Focus"), row.focus, new Label("Topic"), row.topic,
+        HBox actions = new HBox(10, cancel, apply);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        panel.getChildren().setAll(new Region(), new Label("Focus"), row.focus, new Label("Topic"), row.topic,
                 new Label("Focus minutes"), row.duration, new Label("Break after"), row.pause, actions);
-        Popup popup = new Popup();
-        popup.setAutoHide(true);
-        popup.getContent().add(popupRoot(panel));
-        cancel.setOnAction(event -> popup.hide());
+        modal[0] = showModal(panel);
+        panel.getChildren().set(0, modalHeader("Edit study block", modal));
+        cancel.setOnAction(event -> closeModal(modal[0]));
         apply.setOnAction(event -> {
             row.refreshSummary();
-            popup.hide();
+            closeModal(modal[0]);
         });
-        popup.setOnShown(event -> {
-            stylePopupScene(popup);
-            javafx.geometry.Point2D point = row.row.localToScreen(
-                    Math.max(18, row.row.getLayoutBounds().getWidth() / 2 - 165), 26);
-            popup.setX(point.getX());
-            popup.setY(point.getY());
-        });
-        popup.show(row.row.getScene().getWindow(), 0, 0);
     }
 
     private void showAddBlockPopup(VBox editor, List<BlockEditorRow> rows, StudyBlock defaults) {
         BlockEditorRow draft = new BlockEditorRow(rows.size() + 1, defaults, () -> { });
-        VBox panel = new VBox(10);
-        panel.getStyleClass().add("editor-popup");
-        Label title = new Label("Add study block");
-        title.getStyleClass().add("popup-title");
+        StackPane[] modal = new StackPane[1];
+        VBox panel = new VBox(16);
         Button cancel = new Button("Cancel");
         cancel.getStyleClass().add("secondary-button");
         Button add = new Button("Add block");
         add.getStyleClass().add("primary-button");
-        HBox actions = new HBox(8, cancel, add);
-        actions.setAlignment(Pos.CENTER);
-        actions.setMaxWidth(Double.MAX_VALUE);
-        panel.getChildren().setAll(title, new Label("Focus"), draft.focus, new Label("Topic"), draft.topic,
+        HBox actions = new HBox(10, cancel, add);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        panel.getChildren().setAll(new Region(), new Label("Focus"), draft.focus, new Label("Topic"), draft.topic,
                 new Label("Focus minutes"), draft.duration, new Label("Break after"), draft.pause, actions);
-        Popup popup = new Popup();
-        popup.setAutoHide(true);
-        popup.getContent().add(popupRoot(panel));
-        cancel.setOnAction(event -> popup.hide());
+        modal[0] = showModal(panel);
+        panel.getChildren().set(0, modalHeader("Add study block", modal));
+        cancel.setOnAction(event -> closeModal(modal[0]));
         add.setOnAction(event -> {
             draft.refreshSummary();
             draft.setEditAction(() -> showBlockEditorPopup(draft));
             rows.add(draft);
             editor.getChildren().add(draft.row);
-            popup.hide();
+            closeModal(modal[0]);
         });
-        popup.setOnShown(event -> {
-            stylePopupScene(popup);
-            javafx.geometry.Point2D point = add.localToScreen(0, add.getLayoutBounds().getHeight() + 8);
-            popup.setX(point.getX());
-            popup.setY(point.getY());
-        });
-        popup.show(add.getScene().getWindow(), 0, 0);
     }
 
     private void addTemplateCard(FlowPane library, List<VBox> cards, String name, String description,
@@ -1810,20 +1855,36 @@ public final class StudyPlannerApp extends Application {
         alert.getDialogPane().getScene().setFill(Color.TRANSPARENT);
     }
 
+    private void showMessageModal(String title, String message, boolean error) {
+        if (primaryStage == null || primaryStage.getScene() == null) {
+            Alert alert = new Alert(error ? Alert.AlertType.ERROR : Alert.AlertType.INFORMATION,
+                    message == null ? "Unknown error" : message);
+            styleDialogScene(alert);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.showAndWait();
+            return;
+        }
+        StackPane[] modal = new StackPane[1];
+        Label copy = new Label(message == null ? "Unknown error" : message);
+        copy.setWrapText(true);
+        copy.getStyleClass().add("modal-message");
+        Button close = new Button("Close");
+        close.getStyleClass().add("primary-button");
+        HBox actions = new HBox(close);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        VBox panel = new VBox(18);
+        modal[0] = showModal(panel);
+        panel.getChildren().setAll(modalHeader(title, modal), copy, actions);
+        close.setOnAction(event -> closeModal(modal[0]));
+    }
+
     private void showInfo(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION, message);
-        styleDialogScene(alert);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.showAndWait();
+        showMessageModal(title, message, false);
     }
 
     private void showError(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, message == null ? "Unknown error" : message);
-        styleDialogScene(alert);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.showAndWait();
+        showMessageModal(title, message, true);
     }
 
     private static List<StudySessionItem> sessionItems(ScheduleTemplate schedule) {

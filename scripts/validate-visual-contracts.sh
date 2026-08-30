@@ -15,11 +15,14 @@ require() {
 }
 
 require 'private void applyMatugenPalette\(Node root\)' "$app"
-require 'stylePopupScene\(popup\)' "$app"
+require 'showModal\(' "$app"
+require 'modalEscapeHandler' "$app"
 require 'styleOwnedPopupWindows' "$app"
 require '\.root\.popup' "$css"
 require '\.popup-root' "$css"
-require '\.editor-popup' "$css"
+require '\.editor-modal' "$css"
+require '\.modal-backdrop' "$css"
 require 'background-radius: 0' "$css"
+! grep -Eq 'editor-popup|new Popup|stylePopupScene' "$app" "$css"
 
 printf '%s\n' 'Planner visual contracts: OK'

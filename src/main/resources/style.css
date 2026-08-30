@@ -1064,7 +1064,91 @@
     -fx-text-fill: -fx-livara-muted;
 }
 
-/* Contextual editor popups: transparent window root, themed panel, no legacy white corners. */
+/* Contextual editor modals: one scene-graph host, no native Popup rectangle. */
+.modal-layer {
+    -fx-background-color: transparent;
+}
+.modal-backdrop {
+    -fx-background-color: rgba(0, 0, 0, 0.76);
+    -fx-padding: 42px;
+}
+.editor-modal {
+    -fx-background-color: -fx-livara-surface-raised;
+    -fx-background-insets: 0;
+    -fx-background-radius: 18px;
+    -fx-border-color: -fx-livara-border-strong;
+    -fx-border-insets: 0;
+    -fx-border-radius: 18px;
+    -fx-border-width: 1px;
+    -fx-padding: 26px;
+    -fx-min-width: 520px;
+    -fx-pref-width: 560px;
+    -fx-max-width: 680px;
+    -fx-min-height: 360px;
+}
+.modal-header {
+    -fx-padding: 0 0 8px 0;
+}
+.modal-close-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 5px;
+    -fx-min-width: 32px;
+    -fx-min-height: 32px;
+}
+.modal-close-button:hover,
+.modal-close-button:focused {
+    -fx-background-color: -fx-livara-surface-hover;
+    -fx-border-color: -fx-livara-border-strong;
+}
+.modal-close-button .tabler-icon {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-muted;
+    -fx-stroke-width: 2px;
+}
+.modal-close-button:hover .tabler-icon {
+    -fx-stroke: -fx-livara-text;
+}
+.icon-picker-grid {
+    -fx-background-color: -fx-livara-surface;
+    -fx-background-radius: 12px;
+    -fx-border-color: -fx-livara-border;
+    -fx-border-radius: 12px;
+    -fx-padding: 12px;
+}
+.icon-choice,
+.icon-choice-current {
+    -fx-background-color: -fx-livara-surface;
+    -fx-border-color: -fx-livara-border;
+    -fx-background-radius: 9px;
+    -fx-border-radius: 9px;
+    -fx-text-fill: -fx-livara-muted;
+    -fx-padding: 8px;
+}
+.icon-choice {
+    -fx-min-width: 104px;
+    -fx-pref-width: 112px;
+}
+.icon-choice:hover,
+.icon-choice:focused {
+    -fx-background-color: -fx-livara-accent-soft;
+    -fx-border-color: -fx-livara-accent;
+    -fx-text-fill: -fx-livara-text;
+}
+.icon-choice .icon-choice-graphic,
+.icon-choice-current .icon-choice-graphic {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-livara-accent;
+    -fx-stroke-width: 2px;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+.icon-choice-current {
+    -fx-alignment: CENTER_LEFT;
+    -fx-min-height: 44px;
+}
+
+/* Legacy popup selectors remain only for ComboBox skin windows, not editor modals. */
 .root.popup,
 .popup-root {
     -fx-background-color: transparent;
@@ -1082,46 +1166,28 @@
     -fx-border-radius: 0;
     -fx-padding: 0;
 }
-.editor-popup {
-    -fx-background-color: -fx-livara-surface-raised;
-    -fx-background-insets: 0;
-    -fx-background-radius: 14px;
-    -fx-border-color: -fx-livara-border-strong;
-    -fx-border-insets: 0;
-    -fx-border-radius: 14px;
-    -fx-border-width: 1px;
-    -fx-padding: 18px;
-    -fx-min-width: 330px;
-    -fx-max-width: 420px;
-}
-.editor-popup > .label {
-    -fx-text-fill: -fx-livara-muted;
-}
-.editor-popup .popup-title {
-    -fx-font-size: 15px;
-    -fx-font-weight: bold;
-    -fx-text-fill: -fx-livara-text;
-    -fx-padding: 0 0 5px 0;
-}
-.editor-popup .popup-field,
-.editor-popup .text-field,
-.editor-popup .combo-box,
-.editor-popup .spinner {
-    -fx-background-color: -fx-livara-surface;
-    -fx-background-insets: 0;
-    -fx-background-radius: 8px;
-    -fx-border-color: -fx-livara-border;
-    -fx-border-insets: 0;
-    -fx-border-radius: 8px;
-    -fx-text-fill: -fx-livara-text;
-    -fx-highlight-fill: -fx-livara-accent;
-    -fx-highlight-text-fill: -fx-livara-background;
-}
-
 .text-field,
 .text-area {
     -fx-highlight-fill: -fx-livara-accent;
     -fx-highlight-text-fill: -fx-livara-background;
+}
+.editor-modal .text-field {
+    -fx-background-color: -fx-livara-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 9px;
+    -fx-border-color: -fx-livara-border;
+    -fx-border-insets: 0;
+    -fx-border-radius: 9px;
+    -fx-text-fill: -fx-livara-text;
+}
+.editor-modal .text-field:focused {
+    -fx-border-color: -fx-livara-accent;
+}
+.modal-message {
+    -fx-font-size: 13px;
+    -fx-line-spacing: 3px;
+    -fx-text-fill: -fx-livara-text;
+    -fx-max-width: 560px;
 }
 
 .cycle-library {
@@ -1152,14 +1218,6 @@
     -fx-font-size: 10px;
     -fx-text-fill: -fx-livara-muted;
 }
-.editor-popup .button-bar {
-    -fx-alignment: center;
-    -fx-padding: 8px 0 0 0;
-}
-.editor-popup .button-bar .button {
-    -fx-min-width: 112px;
-}
-
 .manager-order-label {
     -fx-font-family: "Monospace";
     -fx-font-size: 11px;
