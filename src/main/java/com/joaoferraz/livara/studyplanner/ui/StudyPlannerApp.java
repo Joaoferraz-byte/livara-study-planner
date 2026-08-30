@@ -88,6 +88,7 @@ public final class StudyPlannerApp extends Application {
     private static final double PROGRESS_RING_SIZE = 112;
     private static final double PROGRESS_RING_RADIUS = 49;
     private static final double PROGRESS_RING_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RING_RADIUS;
+    private static final int ICON_PICKER_COLUMNS = 9;
     private static final List<String> VAULT_FOLDERS = List.of(
             "Black Box", "Source Notes", "Projects", "Daily Notes", "Xournal++", "References");
     private static final List<String> TEMPLATE_ICON_IDS = List.of(
@@ -1049,16 +1050,32 @@ public final class StudyPlannerApp extends Application {
         return graphic;
     }
 
-    private FlowPane iconPicker(ComboBox<String> icon, Button currentIcon) {
-        FlowPane grid = new FlowPane();
-        grid.setHgap(8);
-        grid.setVgap(8);
+    private GridPane iconPicker(ComboBox<String> icon, Button currentIcon) {
+        GridPane grid = new GridPane(8, 8);
+        grid.setMaxWidth(Double.MAX_VALUE);
         grid.getStyleClass().add("icon-picker-grid");
-        for (String iconId : icon.getItems()) {
-            Button choice = new Button(iconId.replace('-', ' '));
+        for (int column = 0; column < ICON_PICKER_COLUMNS; column++) {
+            ColumnConstraints constraints = new ColumnConstraints();
+            constraints.setPercentWidth(100.0 / ICON_PICKER_COLUMNS);
+            constraints.setHgrow(Priority.ALWAYS);
+            constraints.setFillWidth(true);
+            constraints.setHalignment(javafx.geometry.HPos.CENTER);
+            grid.getColumnConstraints().add(constraints);
+        }
+        for (int index = 0; index < icon.getItems().size(); index++) {
+            String iconId = icon.getItems().get(index);
+            Button choice = new Button();
             choice.setGraphic(iconGraphic(iconId));
+            choice.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+            choice.setAccessibleText("Select icon " + iconId);
             choice.setTooltip(new Tooltip(iconId));
             choice.getStyleClass().add("icon-choice");
+            choice.setMinWidth(0);
+            choice.setMaxWidth(Double.MAX_VALUE);
+            GridPane.setHgrow(choice, Priority.ALWAYS);
+            GridPane.setFillWidth(choice, true);
+            GridPane.setHalignment(choice, javafx.geometry.HPos.CENTER);
+            grid.add(choice, index % ICON_PICKER_COLUMNS, index / ICON_PICKER_COLUMNS);
             choice.setOnAction(event -> {
                 icon.setValue(iconId);
                 currentIcon.setGraphic(iconGraphic(iconId));
@@ -1066,7 +1083,6 @@ public final class StudyPlannerApp extends Application {
                 grid.setVisible(false);
                 grid.setManaged(false);
             });
-            grid.getChildren().add(choice);
         }
         return grid;
     }
@@ -1077,7 +1093,7 @@ public final class StudyPlannerApp extends Application {
         StackPane[] modal = new StackPane[1];
         VBox panel = new VBox(16);
         Button currentIcon = iconButton(icon.getValue());
-        FlowPane iconGrid = iconPicker(icon, currentIcon);
+        GridPane iconGrid = iconPicker(icon, currentIcon);
         ScrollPane iconScroll = new ScrollPane(iconGrid);
         iconScroll.setFitToWidth(true);
         iconScroll.setPrefViewportHeight(250);

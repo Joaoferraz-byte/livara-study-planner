@@ -1144,14 +1144,16 @@
     -fx-background-radius: 9px;
     -fx-border-radius: 9px;
     -fx-text-fill: -fx-livara-muted;
-    -fx-padding: 8px;
+    -fx-padding: 0;
 }
 .icon-choice {
-    -fx-min-width: 132px;
-    -fx-pref-width: 148px;
-    -fx-min-height: 58px;
-    -fx-pref-height: 58px;
-    -fx-font-size: 13px;
+    -fx-min-width: 0;
+    -fx-pref-width: 48px;
+    -fx-max-width: Infinity;
+    -fx-min-height: 48px;
+    -fx-pref-height: 48px;
+    -fx-max-height: 48px;
+    -fx-content-display: graphic-only;
 }
 .icon-choice:hover,
 .icon-choice:focused {
@@ -1168,9 +1170,13 @@
     -fx-stroke-line-join: round;
 }
 .icon-choice-current {
-    -fx-alignment: CENTER_LEFT;
-    -fx-min-height: 58px;
-    -fx-pref-height: 58px;
+    -fx-alignment: CENTER;
+    -fx-min-width: 48px;
+    -fx-pref-width: 48px;
+    -fx-max-width: 48px;
+    -fx-min-height: 48px;
+    -fx-pref-height: 48px;
+    -fx-max-height: 48px;
 }
 .editor-modal .text-field,
 .editor-modal .combo-box,
