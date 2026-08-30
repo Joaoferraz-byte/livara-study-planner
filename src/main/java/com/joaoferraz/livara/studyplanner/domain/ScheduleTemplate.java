@@ -100,6 +100,10 @@ public final class ScheduleTemplate {
     public List<StudyBlock> blocks(Cycle value, DayOfWeek day) {
         return blocksByCycle.getOrDefault(value, Map.of()).getOrDefault(day, List.of());
     }
+    public List<StudyBlock> sequence() { return sequence(cycle); }
+    public List<StudyBlock> sequence(Cycle value) {
+        return blocks(value).values().stream().flatMap(List::stream).toList();
+    }
     public Map<Cycle, Map<DayOfWeek, List<StudyBlock>>> blocksByCycle() { return blocksByCycle; }
     public int totalBlocks() { return totalBlocks(cycle); }
     public int totalBlocks(Cycle value) { return blocks(value).values().stream().mapToInt(List::size).sum(); }
