@@ -165,14 +165,8 @@ public final class StudyPlannerApp extends Application {
         left.setAlignment(Pos.CENTER_LEFT);
 
         menu.setText("");
-        VBox menuIcon = new VBox(3);
-        menuIcon.setAlignment(Pos.CENTER);
+        Label menuIcon = new Label("⌂");
         menuIcon.getStyleClass().add("menu-icon");
-        for (int dot = 0; dot < 3; dot++) {
-            Circle menuDot = new Circle(1.5);
-            menuDot.getStyleClass().add("menu-dot");
-            menuIcon.getChildren().add(menuDot);
-        }
         menu.setGraphic(menuIcon);
         menu.setAccessibleText("Open planner menu");
         menu.setTooltip(new Tooltip("Planner menu"));
@@ -571,8 +565,6 @@ public final class StudyPlannerApp extends Application {
         done.setOnAction(event -> toggleTask(item, task, done.isSelected()));
         done.getStyleClass().add("task-check");
 
-        Label number = new Label(String.format("%02d", order));
-        number.getStyleClass().add("task-number");
         Label taskTitle = new Label(task.title());
         taskTitle.getStyleClass().add("task-title");
         Label taskText = new Label(task.description());
@@ -580,8 +572,8 @@ public final class StudyPlannerApp extends Application {
         taskText.getStyleClass().add("task-text");
         VBox copy = new VBox(2, taskTitle, taskText);
         HBox.setHgrow(copy, Priority.ALWAYS);
-        HBox row = new HBox(9, done, number, copy);
-        row.setAlignment(Pos.TOP_LEFT);
+        HBox row = new HBox(9, done, copy);
+        row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("task-row");
         if (progress.isCompleted(taskId) || progress.isCompleted(item.id())) {
             row.getStyleClass().add("completed");

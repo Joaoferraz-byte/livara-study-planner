@@ -152,27 +152,26 @@
 }
 
 .menu-icon {
-    -fx-min-width: 16px;
-    -fx-pref-width: 16px;
-    -fx-max-width: 16px;
-    -fx-min-height: 16px;
-    -fx-pref-height: 16px;
-    -fx-max-height: 16px;
+    -fx-min-width: 18px;
+    -fx-pref-width: 18px;
+    -fx-max-width: 18px;
+    -fx-min-height: 18px;
+    -fx-pref-height: 18px;
+    -fx-max-height: 18px;
     -fx-alignment: CENTER;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-livara-muted;
 }
 
-.menu-dot {
-    -fx-fill: -fx-livara-muted;
+.menu-button:hover .menu-icon,
+.menu-button:focused .menu-icon {
+    -fx-text-fill: -fx-livara-accent;
 }
 
 .menu-button:hover, .menu-button:focused {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
-}
-
-.menu-button:hover .menu-dot,
-.menu-button:focused .menu-dot {
-    -fx-fill: -fx-livara-accent;
 }
 
 .menu-button .arrow-button {
@@ -451,9 +450,9 @@
 
 .task-check .box {
     -fx-background-color: transparent;
-    -fx-background-radius: 5px;
+    -fx-background-radius: 999px;
     -fx-border-color: -fx-livara-border-strong;
-    -fx-border-radius: 5px;
+    -fx-border-radius: 999px;
     -fx-border-width: 1px;
     -fx-padding: 2px;
 }
