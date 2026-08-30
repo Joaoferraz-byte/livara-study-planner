@@ -139,29 +139,40 @@
 }
 
 .menu-button {
-    -fx-min-width: 36px;
-    -fx-pref-width: 36px;
-    -fx-max-width: 36px;
-    -fx-min-height: 32px;
-    -fx-pref-height: 32px;
-    -fx-max-height: 32px;
-    -fx-background-color: -fx-livara-surface-raised;
-    -fx-border-color: -fx-livara-border-strong;
-    -fx-text-fill: -fx-livara-text;
+    -fx-min-width: 28px;
+    -fx-pref-width: 28px;
+    -fx-max-width: 28px;
+    -fx-min-height: 28px;
+    -fx-pref-height: 28px;
+    -fx-max-height: 28px;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
     -fx-padding: 0;
 }
 
 .menu-icon {
-    -fx-font-size: 22px;
-    -fx-font-weight: bold;
-    -fx-line-spacing: -4px;
-    -fx-text-fill: -fx-livara-text;
+    -fx-min-width: 16px;
+    -fx-pref-width: 16px;
+    -fx-max-width: 16px;
+    -fx-min-height: 16px;
+    -fx-pref-height: 16px;
+    -fx-max-height: 16px;
+    -fx-alignment: CENTER;
+}
+
+.menu-dot {
+    -fx-fill: -fx-livara-muted;
 }
 
 .menu-button:hover, .menu-button:focused {
-    -fx-background-color: -fx-livara-surface-highlight;
-    -fx-border-color: -fx-livara-accent;
-    -fx-text-fill: -fx-livara-text;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.menu-button:hover .menu-dot,
+.menu-button:focused .menu-dot {
+    -fx-fill: -fx-livara-accent;
 }
 
 .menu-button .arrow-button {
@@ -403,6 +414,7 @@
 }
 
 .strategy-callout {
+    -fx-max-width: infinity;
     -fx-background-color: -fx-livara-accent-soft;
     -fx-background-radius: 9px;
     -fx-border-color: -fx-livara-border-strong;

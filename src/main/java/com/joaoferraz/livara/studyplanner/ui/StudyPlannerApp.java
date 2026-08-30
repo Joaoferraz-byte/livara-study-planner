@@ -165,8 +165,14 @@ public final class StudyPlannerApp extends Application {
         left.setAlignment(Pos.CENTER_LEFT);
 
         menu.setText("");
-        Label menuIcon = new Label("⋮");
+        VBox menuIcon = new VBox(3);
+        menuIcon.setAlignment(Pos.CENTER);
         menuIcon.getStyleClass().add("menu-icon");
+        for (int dot = 0; dot < 3; dot++) {
+            Circle menuDot = new Circle(1.5);
+            menuDot.getStyleClass().add("menu-dot");
+            menuIcon.getChildren().add(menuDot);
+        }
         menu.setGraphic(menuIcon);
         menu.setAccessibleText("Open planner menu");
         menu.setTooltip(new Tooltip("Planner menu"));
@@ -539,6 +545,7 @@ public final class StudyPlannerApp extends Application {
 
         Label callout = new Label("Strategy  ·  " + item.focus().label() + " practice");
         callout.setWrapText(true);
+        callout.setMaxWidth(Double.MAX_VALUE);
         callout.getStyleClass().add("strategy-callout");
 
         List<StudyTask> taskDefinitions = studyTasks();
