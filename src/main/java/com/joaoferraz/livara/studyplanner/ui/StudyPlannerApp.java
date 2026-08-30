@@ -1199,9 +1199,9 @@ public final class StudyPlannerApp extends Application {
         create.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
         create.setAccessibleText("Create new template");
         create.setTooltip(new Tooltip("Create new template"));
-        create.setMinSize(58, 58);
-        create.setPrefSize(58, 58);
-        create.setMaxSize(58, 58);
+        create.setMinSize(52, 52);
+        create.setPrefSize(52, 52);
+        create.setMaxSize(52, 52);
         create.getStyleClass().add("create-template-button");
         create.setOnAction(event -> onSelected.run());
         StackPane slot = new StackPane(create);

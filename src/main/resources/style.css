@@ -1087,8 +1087,8 @@
     -fx-stroke-width: 2.25px;
     -fx-stroke-line-cap: round;
     -fx-stroke-line-join: round;
-    -fx-scale-x: 1.0;
-    -fx-scale-y: 1.0;
+    -fx-scale-x: 0.9;
+    -fx-scale-y: 0.9;
 }
 
 /* Contextual editor modals: one scene-graph host, no native Popup rectangle. */
