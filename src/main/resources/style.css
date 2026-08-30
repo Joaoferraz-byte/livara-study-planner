@@ -1069,10 +1069,9 @@
     -fx-padding: 0;
     -fx-cursor: hand;
 }
-.create-template-button:hover,
-.create-template-button:focused {
-    -fx-background-color: -fx-livara-accent-soft;
-    -fx-background-radius: 999px;
+.create-template-button:hover .create-template-icon,
+.create-template-button:focused .create-template-icon {
+    -fx-stroke: -fx-livara-text;
 }
 .create-template-icon {
     -fx-fill: transparent;
