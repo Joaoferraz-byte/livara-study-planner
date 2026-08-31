@@ -4,6 +4,7 @@ import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,7 +33,7 @@ public final class ScheduleTemplate {
 
     private static Map<Cycle, Map<DayOfWeek, List<StudyBlock>>> singleCycle(
             Cycle cycle, Map<DayOfWeek, List<StudyBlock>> blocksByDay) {
-        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> result = new EnumMap<>(Cycle.class);
+        LinkedHashMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> result = new LinkedHashMap<>();
         result.put(cycle, blocksByDay);
         return result;
     }
@@ -60,7 +61,7 @@ public final class ScheduleTemplate {
             throw new IllegalArgumentException("Template icon cannot be blank");
         }
         Objects.requireNonNull(blocksByCycle, "blocksByCycle");
-        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> copy = new EnumMap<>(Cycle.class);
+        LinkedHashMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> copy = new LinkedHashMap<>();
         for (Map.Entry<Cycle, Map<DayOfWeek, List<StudyBlock>>> entry : blocksByCycle.entrySet()) {
             Cycle value = Objects.requireNonNull(entry.getKey(), "cycle");
             Map<DayOfWeek, List<StudyBlock>> source = Objects.requireNonNull(entry.getValue(), "cycle days");
@@ -120,7 +121,7 @@ public final class ScheduleTemplate {
     public ScheduleTemplate withAddedCycle(Cycle newCycle, Map<DayOfWeek, List<StudyBlock>> newBlocks) {
         Objects.requireNonNull(newCycle, "newCycle");
         Objects.requireNonNull(newBlocks, "newBlocks");
-        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> updated = new EnumMap<>(Cycle.class);
+        LinkedHashMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> updated = new LinkedHashMap<>();
         updated.putAll(blocksByCycle);
         updated.put(newCycle, newBlocks);
         return withCycles(schemaVersion, name, newCycle, workflowTemplate, pauseMinutes, iconId, updated);
@@ -132,7 +133,7 @@ public final class ScheduleTemplate {
         if (!hasCycle(updatedCycle)) {
             throw new IllegalArgumentException("Cycle does not exist: " + updatedCycle);
         }
-        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> updated = new EnumMap<>(Cycle.class);
+        LinkedHashMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> updated = new LinkedHashMap<>();
         updated.putAll(blocksByCycle);
         updated.put(updatedCycle, updatedBlocks);
         return withCycles(schemaVersion, name, updatedCycle, workflowTemplate, pauseMinutes, iconId, updated);
@@ -143,7 +144,7 @@ public final class ScheduleTemplate {
         if (!hasCycle(removedCycle)) {
             throw new IllegalArgumentException("Cycle does not exist: " + removedCycle);
         }
-        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> updated = new EnumMap<>(Cycle.class);
+        LinkedHashMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> updated = new LinkedHashMap<>();
         updated.putAll(blocksByCycle);
         updated.remove(removedCycle);
         Cycle nextActive = updated.containsKey(cycle) ? cycle : updated.keySet().stream().findFirst().orElse(cycle);

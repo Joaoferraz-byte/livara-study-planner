@@ -3,7 +3,7 @@ package com.joaoferraz.livara.studyplanner.domain;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,8 +16,8 @@ public final class DefaultScheduleFactory {
     }
 
     public static ScheduleTemplate create(Cycle cycle, WorkflowTemplate workflowTemplate) {
-        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
-        for (Cycle value : Cycle.values()) {
+        LinkedHashMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new LinkedHashMap<>();
+        for (Cycle value : builtInCyclesFor(cycle)) {
             cycles.put(value, project(value, workflowTemplate));
         }
         return ScheduleTemplate.withCycles(2, workflowTemplate.label(), cycle, workflowTemplate, 15, cycles);
@@ -29,18 +29,25 @@ public final class DefaultScheduleFactory {
      */
     public static ScheduleTemplate createDraft(Cycle cycle) {
         WorkflowTemplate workflow = WorkflowTemplate.MARKET_PROGRAMMING;
-        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
+        LinkedHashMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new LinkedHashMap<>();
         cycles.put(cycle, project(cycle, workflow));
         return ScheduleTemplate.withCycles(2, "New study template", cycle,
                 workflow, 15, "layout-dashboard", cycles);
     }
 
     public static Map<DayOfWeek, List<StudyBlock>> emptyCycle() {
-        EnumMap<DayOfWeek, List<StudyBlock>> days = new EnumMap<>(DayOfWeek.class);
+        java.util.EnumMap<DayOfWeek, List<StudyBlock>> days = new java.util.EnumMap<>(DayOfWeek.class);
         for (DayOfWeek day : DayOfWeek.values()) {
             days.put(day, List.of());
         }
         return days;
+    }
+
+    private static List<Cycle> builtInCyclesFor(Cycle activeCycle) {
+        if (activeCycle.equals(Cycle.A) || activeCycle.equals(Cycle.B)) {
+            return List.of(Cycle.A, Cycle.B);
+        }
+        return List.of(activeCycle);
     }
 
     private static Map<DayOfWeek, List<StudyBlock>> project(Cycle cycle, WorkflowTemplate workflowTemplate) {
@@ -58,43 +65,26 @@ public final class DefaultScheduleFactory {
                 DayOfWeek.SATURDAY,
                 DayOfWeek.SATURDAY
         };
-        EnumMap<DayOfWeek, List<StudyBlock>> grouped = new EnumMap<>(DayOfWeek.class);
+        java.util.EnumMap<DayOfWeek, List<StudyBlock>> grouped = new java.util.EnumMap<>(DayOfWeek.class);
         for (DayOfWeek day : DayOfWeek.values()) {
             grouped.put(day, new ArrayList<>());
         }
         for (int index = 0; index < sequence.size(); index++) {
             StudyBlock source = sequence.get(index);
-            List<StudyBlock> dayBlocks = grouped.get(activeDays[index]);
+            DayOfWeek day = index < activeDays.length ? activeDays[index] : DayOfWeek.SATURDAY;
+            List<StudyBlock> dayBlocks = grouped.get(day);
             int order = dayBlocks.size() + 1;
             int pause = index + 1 < sequence.size() ? 15 : 0;
             dayBlocks.add(new StudyBlock(order, source.focus(), source.topic(), source.duration(), pause));
         }
-        EnumMap<DayOfWeek, List<StudyBlock>> result = new EnumMap<>(DayOfWeek.class);
+        java.util.EnumMap<DayOfWeek, List<StudyBlock>> result = new java.util.EnumMap<>(DayOfWeek.class);
         for (DayOfWeek day : DayOfWeek.values()) {
             result.put(day, List.copyOf(grouped.get(day)));
         }
         return result;
     }
 
-    private static List<StudyBlock> draftSequence(Cycle cycle) {
-        FocusArea firstSchool = cycle == Cycle.A ? FocusArea.PHYSICS : FocusArea.CHEMISTRY;
-        FocusArea secondSchool = cycle == Cycle.A ? FocusArea.BIOLOGY : FocusArea.MATHEMATICS;
-        return List.of(
-                new StudyBlock(1, FocusArea.REVIEW, "New study goal", Duration.ofHours(1), 15),
-                new StudyBlock(2, FocusArea.MARKET_PROGRAMMING, "New professional practice block", Duration.ofHours(1), 15),
-                new StudyBlock(3, FocusArea.PROJECTS, "New applied project block", Duration.ofHours(1), 15),
-                new StudyBlock(4, FocusArea.LOGIC, "New implementation block", Duration.ofHours(1), 15),
-                new StudyBlock(5, FocusArea.ARCHITECTURE, "New design block", Duration.ofHours(1), 15),
-                new StudyBlock(6, FocusArea.OPTIMIZATION, "New measurement block", Duration.ofHours(1), 15),
-                new StudyBlock(7, firstSchool, "New science block 1", Duration.ofHours(1), 15),
-                new StudyBlock(8, secondSchool, "New science block 2", Duration.ofHours(1), 15));
-    }
-
     public static List<StudyBlock> sequence(Cycle cycle, WorkflowTemplate workflowTemplate) {
-        FocusArea schoolOne = cycle == Cycle.A ? FocusArea.PHYSICS : FocusArea.CHEMISTRY;
-        FocusArea schoolTwo = cycle == Cycle.A ? FocusArea.BIOLOGY : FocusArea.MATHEMATICS;
-        String schoolOneTopic = cycle == Cycle.A ? "Physics · concept retrieval" : "Chemistry · concept retrieval";
-        String schoolTwoTopic = cycle == Cycle.A ? "Biology · concept retrieval" : "Mathematics · concept retrieval";
         FocusArea primary = workflowTemplate.primaryFocus();
         FocusArea secondary = workflowTemplate.secondaryFocus();
 
@@ -106,8 +96,9 @@ public final class DefaultScheduleFactory {
         addIfMissing(sequence, FocusArea.LOGIC, workflowTemplate, "Solve and implement");
         addIfMissing(sequence, FocusArea.ARCHITECTURE, workflowTemplate, "Design and justify");
         addIfMissing(sequence, FocusArea.OPTIMIZATION, workflowTemplate, "Measure and improve");
-        add(sequence, schoolOne, schoolOneTopic);
-        add(sequence, schoolTwo, schoolTwoTopic);
+        for (FocusArea focus : cycle.requiredFocuses()) {
+            addIfMissing(sequence, focus, cycle.subjects() + " · concept retrieval");
+        }
         add(sequence, primary, topic(primary, workflowTemplate, "Spaced retrieval"));
         return List.copyOf(sequence);
     }
@@ -120,6 +111,12 @@ public final class DefaultScheduleFactory {
                                      WorkflowTemplate workflowTemplate, String suffix) {
         if (sequence.stream().noneMatch(block -> block.focus() == focus)) {
             add(sequence, focus, topic(focus, workflowTemplate, suffix));
+        }
+    }
+
+    private static void addIfMissing(List<StudyBlock> sequence, FocusArea focus, String topic) {
+        if (sequence.stream().noneMatch(block -> block.focus() == focus)) {
+            add(sequence, focus, topic);
         }
     }
 

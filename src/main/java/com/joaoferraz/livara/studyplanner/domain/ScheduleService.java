@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,7 +41,13 @@ public final class ScheduleService {
 
     public ScheduleTemplate advanceCycle(ScheduleTemplate template) {
         requireValid(template);
-        return template.withCycle(template.cycle().next());
+        List<Cycle> cycles = template.createdCycles();
+        int activeIndex = cycles.indexOf(template.cycle());
+        if (activeIndex < 0) {
+            throw new IllegalArgumentException("Active cycle does not exist in the template");
+        }
+        Cycle next = cycles.get((activeIndex + 1) % cycles.size());
+        return template.withCycle(next);
     }
 
     public ScheduleTemplate editTemplate(ScheduleTemplate current, String name, Cycle activeCycle,
@@ -59,10 +66,10 @@ public final class ScheduleService {
             normalized.add(new StudyBlock(index + 1, block.focus(), block.topic(), block.duration(), pauseMinutes));
         }
         Map<DayOfWeek, List<StudyBlock>> projected = projectSequence(normalized, current.blocks(activeCycle));
-        EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
+        LinkedHashMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new LinkedHashMap<>();
         cycles.putAll(current.blocksByCycle());
         cycles.put(activeCycle, projected);
-        ScheduleTemplate edited = ScheduleTemplate.withCycles(2, name, activeCycle, workflow, pauseMinutes,
+        ScheduleTemplate edited = ScheduleTemplate.withCycles(current.schemaVersion(), name, activeCycle, workflow, pauseMinutes,
                 iconId, cycles);
         requireValid(edited);
         return edited;

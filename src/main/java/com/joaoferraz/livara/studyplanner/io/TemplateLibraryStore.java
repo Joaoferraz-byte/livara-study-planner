@@ -52,7 +52,7 @@ public final class TemplateLibraryStore {
      */
     private ScheduleTemplate migrateLegacyDefault(ScheduleTemplate schedule) {
         if (schedule.schemaVersion() < 2
-                && schedule.cycle() == Cycle.A
+                && schedule.cycle().equals(Cycle.A)
                 && schedule.name().equalsIgnoreCase(schedule.workflowTemplate().label())
                 && !schedule.hasCycle(Cycle.B)) {
             return schedule.withAddedCycle(Cycle.B,

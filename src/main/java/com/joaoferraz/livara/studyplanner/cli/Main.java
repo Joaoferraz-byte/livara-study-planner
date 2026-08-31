@@ -37,7 +37,7 @@ public final class Main {
             case "next-cycle" -> {
                 ScheduleTemplate next = service.advanceCycle(store.load(file));
                 service.save(file, next);
-                System.out.println("Advanced to " + next.cycle().label() + " in " + file.toAbsolutePath());
+                System.out.println("Advanced to cycle " + next.cycle().label() + " in " + file.toAbsolutePath());
             }
             case "gui" -> StudyPlannerApp.launchWithPath(file);
             default -> {
@@ -80,11 +80,11 @@ public final class Main {
         System.out.println("  template            Create a reusable weekly template");
         System.out.println("  show                Print the current schedule");
         System.out.println("  validate            Validate the schedule contract");
-        System.out.println("  next-cycle          Replace the schedule with the next A/B cycle");
+        System.out.println("  next-cycle          Advance to the next cycle in persisted order");
         System.out.println();
         System.out.println("Options:");
         System.out.println("  --file PATH         Schedule JSON path");
-        System.out.println("  --cycle A|B         Cycle for template creation");
+        System.out.println("  --cycle ID          Cycle id for template creation (built-in A/B or custom)");
     }
 
     private static Path optionPath(String[] args, String option, Path fallback) {
@@ -99,7 +99,7 @@ public final class Main {
     private static Cycle optionCycle(String[] args, Cycle fallback) {
         for (int index = 0; index + 1 < args.length; index++) {
             if ("--cycle".equals(args[index])) {
-                return Cycle.valueOf(args[index + 1].toUpperCase());
+                return Cycle.fromId(args[index + 1]);
             }
         }
         return fallback;

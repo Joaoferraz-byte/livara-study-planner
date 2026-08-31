@@ -34,7 +34,7 @@ public final class ScheduleStore {
         }
         int schemaVersion = integer(root, "schemaVersion");
         String name = string(root, "name");
-        Cycle cycle = Cycle.valueOf(string(root, "cycle"));
+        Cycle activeCycle = Cycle.fromId(string(root, "cycle"));
         WorkflowTemplate workflowTemplate = root.get("workflowTemplate") instanceof String value
                 ? WorkflowTemplate.fromId(value)
                 : WorkflowTemplate.MARKET_PROGRAMMING;
@@ -42,24 +42,27 @@ public final class ScheduleStore {
         String iconId = root.get("iconId") instanceof String value ? value : "layout-dashboard";
         Object cyclesValue = root.get("cycles");
         if (cyclesValue instanceof Map<?, ?> cycleMap) {
-            EnumMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new EnumMap<>(Cycle.class);
-            for (Cycle value : Cycle.values()) {
-                Object rawDays = cycleMap.get(value.name());
-                if (rawDays == null) {
-                    continue;
+            LinkedHashMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : cycleMap.entrySet()) {
+                String cycleId = String.valueOf(entry.getKey());
+                if (!(entry.getValue() instanceof Map<?, ?> cycleObject)) {
+                    throw new IOException("Each cycle must contain an object");
                 }
-                if (!(rawDays instanceof Map<?, ?> dayMap)) {
-                    throw new IOException("Each cycle must contain a days object");
-                }
+                Cycle value = parseCycle(cycleId, cycleObject);
+                Object rawDays = cycleObject.get("days");
+                Map<?, ?> dayMap = rawDays instanceof Map<?, ?> nestedDays ? nestedDays : cycleObject;
                 cycles.put(value, parseDays(dayMap));
+                if (value.equals(activeCycle)) {
+                    activeCycle = value;
+                }
             }
-            return ScheduleTemplate.withCycles(schemaVersion, name, cycle, workflowTemplate, pauseMinutes, iconId, cycles);
+            return ScheduleTemplate.withCycles(schemaVersion, name, activeCycle, workflowTemplate, pauseMinutes, iconId, cycles);
         }
         Object daysValue = root.get("days");
         if (!(daysValue instanceof Map<?, ?> dayMap)) {
             throw new IOException("Schedule document must contain a days object");
         }
-        return new ScheduleTemplate(schemaVersion, name, cycle, workflowTemplate, pauseMinutes, parseDays(dayMap));
+        return new ScheduleTemplate(schemaVersion, name, activeCycle, workflowTemplate, pauseMinutes, parseDays(dayMap));
     }
 
     private static Map<DayOfWeek, List<StudyBlock>> parseDays(Map<?, ?> dayMap) throws IOException {
@@ -114,9 +117,8 @@ public final class ScheduleStore {
             json.append("\n");
             for (int cycleIndex = 0; cycleIndex < cycles.size(); cycleIndex++) {
                 Cycle value = cycles.get(cycleIndex);
-                json.append("    ").append(quote(value.name())).append(": {\n");
-                appendDays(json, template.blocks(value));
-                json.append("    }").append(cycleIndex + 1 == cycles.size() ? "\n" : ",\n");
+                appendCycle(json, template, value);
+                json.append(cycleIndex + 1 == cycles.size() ? "\n" : ",\n");
             }
             json.append("  }\n");
         } else {
@@ -126,25 +128,65 @@ public final class ScheduleStore {
         return json.toString();
     }
 
-    private static void appendDays(StringBuilder json, Map<DayOfWeek, List<StudyBlock>> days) {
+    private static void appendCycle(StringBuilder json, ScheduleTemplate template, Cycle cycle) {
+        json.append("    ").append(quote(cycle.name())).append(": {\n");
+        field(json, "label", quote(cycle.label()), true, 6);
+        field(json, "subjects", quote(cycle.subjects()), true, 6);
+        json.append("      \"requiredFocuses\": [");
+        for (int index = 0; index < cycle.requiredFocuses().size(); index++) {
+            if (index > 0) {
+                json.append(", ");
+            }
+            json.append(quote(cycle.requiredFocuses().get(index).id()));
+        }
+        json.append("],\n");
+        json.append("      \"days\": {\n");
+        appendDays(json, template.blocks(cycle), 8);
+        json.append("      }\n");
+        json.append("    }");
+    }
+
+    private static void appendDays(StringBuilder json, Map<DayOfWeek, List<StudyBlock>> days, int indent) {
         DayOfWeek[] values = DayOfWeek.values();
+        String dayIndent = " ".repeat(indent);
+        String blockIndent = " ".repeat(indent + 2);
+        String fieldIndent = " ".repeat(indent + 4);
         for (int dayIndex = 0; dayIndex < values.length; dayIndex++) {
             DayOfWeek day = values[dayIndex];
-            json.append("      ").append(quote(day.name())).append(": [\n");
+            json.append(dayIndent).append(quote(day.name())).append(": [\n");
             List<StudyBlock> blocks = days.getOrDefault(day, List.of());
             for (int blockIndex = 0; blockIndex < blocks.size(); blockIndex++) {
                 StudyBlock block = blocks.get(blockIndex);
-                json.append("        {\n");
-                field(json, "order", Integer.toString(block.order()), false, 10);
-                field(json, "focus", quote(block.focus().id()), true, 10);
-                field(json, "topic", quote(block.topic()), true, 10);
-                field(json, "durationMinutes", Long.toString(block.duration().toMinutes()), false, 10);
-                json.append("          \"breakAfterMinutes\": ")
+                json.append(blockIndent).append("{\n");
+                field(json, "order", Integer.toString(block.order()), false, indent + 4);
+                field(json, "focus", quote(block.focus().id()), true, indent + 4);
+                field(json, "topic", quote(block.topic()), true, indent + 4);
+                field(json, "durationMinutes", Long.toString(block.duration().toMinutes()), false, indent + 4);
+                json.append(fieldIndent).append("\"breakAfterMinutes\": ")
                         .append(block.breakAfterMinutes()).append("\n");
-                json.append("        }").append(blockIndex + 1 == blocks.size() ? "\n" : ",\n");
+                json.append(blockIndent).append("}").append(blockIndex + 1 == blocks.size() ? "\n" : ",\n");
             }
-            json.append("      ]").append(dayIndex + 1 == values.length ? "\n" : ",\n");
+            json.append(dayIndent).append("]").append(dayIndex + 1 == values.length ? "\n" : ",\n");
         }
+    }
+
+    private static Cycle parseCycle(String id, Map<?, ?> object) throws IOException {
+        Object label = object.get("label");
+        Object subjects = object.get("subjects");
+        Object required = object.get("requiredFocuses");
+        if (!(label instanceof String cycleLabel) || !(subjects instanceof String cycleSubjects)) {
+            return Cycle.fromId(id);
+        }
+        List<FocusArea> requiredFocuses = new ArrayList<>();
+        if (required instanceof List<?> rawFocuses) {
+            for (Object rawFocus : rawFocuses) {
+                if (!(rawFocus instanceof String focusId)) {
+                    throw new IOException("Cycle required focus must be a string");
+                }
+                requiredFocuses.add(FocusArea.fromId(focusId));
+            }
+        }
+        return Cycle.fromDefinition(id, cycleLabel, cycleSubjects, requiredFocuses);
     }
 
     private static void field(StringBuilder json, String key, String value, boolean quoted) {

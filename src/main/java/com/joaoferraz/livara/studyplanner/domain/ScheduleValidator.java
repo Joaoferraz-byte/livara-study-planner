@@ -61,16 +61,9 @@ public final class ScheduleValidator {
                 prefix + "Architecture focus is missing", errors);
         requireFocus(present, FocusArea.OPTIMIZATION,
                 prefix + "Optimization focus is missing", errors);
-        if (cycle == Cycle.A) {
-            requireFocus(present, FocusArea.PHYSICS,
-                    prefix + "Cycle A must include Physics and Biology", errors);
-            requireFocus(present, FocusArea.BIOLOGY,
-                    prefix + "Cycle A must include Physics and Biology", errors);
-        } else {
-            requireFocus(present, FocusArea.CHEMISTRY,
-                    prefix + "Cycle B must include Chemistry and Mathematics", errors);
-            requireFocus(present, FocusArea.MATHEMATICS,
-                    prefix + "Cycle B must include Chemistry and Mathematics", errors);
+        for (FocusArea required : cycle.requiredFocuses()) {
+            requireFocus(present, required,
+                    prefix + "Cycle must include " + required.label(), errors);
         }
     }
 
