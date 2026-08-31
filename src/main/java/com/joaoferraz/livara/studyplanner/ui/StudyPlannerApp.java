@@ -73,7 +73,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -396,14 +395,16 @@ public final class StudyPlannerApp extends Application {
         reload.setOnAction(event -> reloadSchedule());
         MenuItem validate = new MenuItem("Validate schedule");
         validate.setOnAction(event -> validateCurrent());
-        MenuItem cycleA = new MenuItem("Apply cycle A");
-        cycleA.setOnAction(event -> setCycle(Cycle.A));
-        MenuItem cycleB = new MenuItem("Apply cycle B");
-        cycleB.setOnAction(event -> setCycle(Cycle.B));
+        javafx.scene.control.Menu cycleMenu = new javafx.scene.control.Menu("Active cycle");
+        for (Cycle value : current.createdCycles()) {
+            MenuItem item = new MenuItem("Apply " + value.label());
+            item.setOnAction(event -> setCycle(value));
+            cycleMenu.getItems().add(item);
+        }
         MenuItem reset = new MenuItem("Reset session progress");
         reset.setOnAction(event -> resetProgress());
         menu.getItems().addAll(workflowMenu, new SeparatorMenuItem(), reload, validate,
-                new SeparatorMenuItem(), cycleA, cycleB, reset);
+                new SeparatorMenuItem(), cycleMenu, reset);
         menu.showingProperty().addListener((observable, wasShowing, isShowing) -> {
             if (isShowing) {
                 Platform.runLater(this::animateMenuPopup);
@@ -783,7 +784,7 @@ public final class StudyPlannerApp extends Application {
         cycleLibrary.getStyleClass().add("cycle-library");
         List<VBox> cycleCards = new ArrayList<>();
         for (Cycle value : current.createdCycles()) {
-            boolean selected = value == selectedEditorCycle;
+            boolean selected = Objects.equals(value, selectedEditorCycle);
             Label cycleName = new Label("Cycle " + value.label());
             Label subjects = new Label(value.subjects());
             Label summary = new Label(current.totalBlocks(value) + " blocks · " + current.pauseMinutes() + " min pause");
@@ -803,7 +804,7 @@ public final class StudyPlannerApp extends Application {
             cycleCards.add(card);
             cycleLibrary.getChildren().add(card);
         }
-        addCreateCycleButton(cycleLibrary, current.createdCycles().size() >= Cycle.values().length);
+        addCreateCycleButton(cycleLibrary, false);
         Label cyclesTitle = new Label("CYCLES");
         cyclesTitle.getStyleClass().add("manager-label");
         Label cyclesHint = new Label(current.createdCycles().isEmpty()
@@ -911,23 +912,87 @@ public final class StudyPlannerApp extends Application {
         return parsed;
     }
 
-    private void createCycle() {
-        try {
-            Cycle next = java.util.Arrays.stream(Cycle.values())
-                    .filter(value -> !current.hasCycle(value))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalStateException("All available cycles already exist"));
-            current = current.withAddedCycle(next,
-                    DefaultScheduleFactory.create(next, current.workflowTemplate()).blocks(next));
-            library = library.updateSelected(current);
-            selectedEditorCycle = next;
-            activateSelectedTemplate();
-            persistSchedule();
-            persistProgress();
-            showTemplatePage();
-        } catch (RuntimeException exception) {
-            showError("Unable to create cycle", exception.getMessage());
+    private void showCreateCyclePopup() {
+        StackPane[] modal = new StackPane[1];
+        VBox panel = new VBox(16);
+        TextField id = new TextField("cycle-" + (current.createdCycles().size() + 1));
+        id.setPromptText("stable-id");
+        TextField label = new TextField("Cycle " + (current.createdCycles().size() + 1));
+        label.setPromptText("Display label");
+        TextField subjects = new TextField("Custom focus");
+        subjects.setPromptText("What this rotation emphasizes");
+        ComboBox<String> behavior = new ComboBox<>();
+        behavior.getItems().addAll(
+                "Custom core sequence",
+                "Copy active cycle",
+                "Physics + Biology preset",
+                "Chemistry + Mathematics preset");
+        behavior.setValue("Custom core sequence");
+        for (Node node : List.of(id, label, subjects, behavior)) {
+            node.getStyleClass().add("popup-field");
+            if (node instanceof Control control) {
+                control.setMaxWidth(Double.MAX_VALUE);
+            }
         }
+        Label hint = new Label("Choose whether the new rotation starts from the core workflow, copies the active cycle, or uses one of the built-in academic presets.");
+        hint.setWrapText(true);
+        hint.getStyleClass().add("modal-message");
+        Button cancel = new Button("Cancel");
+        cancel.getStyleClass().add("secondary-button");
+        Button create = new Button("Create cycle");
+        create.getStyleClass().add("primary-button");
+        HBox actions = new HBox(10, cancel, create);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        panel.getChildren().setAll(new Region(), new Label("Stable ID"), id,
+                new Label("Display label"), label, new Label("Subjects / description"), subjects,
+                new Label("How should it work?"), behavior, hint, actions);
+        modal[0] = showModal(panel);
+        panel.getChildren().set(0, modalHeader("Create study cycle", modal));
+        cancel.setOnAction(event -> closeModal(modal[0]));
+        create.setOnAction(event -> {
+            try {
+                String cycleId = id.getText().trim();
+                String cycleLabel = label.getText().trim();
+                String cycleSubjects = subjects.getText().trim();
+                if (cycleId.isBlank() || cycleLabel.isBlank() || cycleSubjects.isBlank()) {
+                    throw new IllegalArgumentException("Cycle id, label and description are required");
+                }
+                List<FocusArea> required = requiredFocusesFor(behavior.getValue());
+                Cycle created = Cycle.fromDefinition(cycleId, cycleLabel, cycleSubjects, required);
+                if (current.hasCycle(created)) {
+                    throw new IllegalArgumentException("A cycle with this id already exists");
+                }
+                Map<java.time.DayOfWeek, List<StudyBlock>> blocks = blocksForNewCycle(created, behavior.getValue());
+                current = current.withAddedCycle(created, blocks);
+                library = library.updateSelected(current);
+                selectedEditorCycle = created;
+                activateSelectedTemplate();
+                persistSchedule();
+                persistProgress();
+                closeModal(modal[0]);
+                showTemplatePage();
+            } catch (RuntimeException exception) {
+                showError("Unable to create cycle", exception.getMessage());
+            }
+        });
+    }
+
+    private List<FocusArea> requiredFocusesFor(String behavior) {
+        return switch (behavior) {
+            case "Physics + Biology preset" -> Cycle.A.requiredFocuses();
+            case "Chemistry + Mathematics preset" -> Cycle.B.requiredFocuses();
+            case "Copy active cycle" -> current.cycle().requiredFocuses();
+            default -> List.of();
+        };
+    }
+
+    private Map<java.time.DayOfWeek, List<StudyBlock>> blocksForNewCycle(Cycle cycle, String behavior) {
+        return switch (behavior) {
+            case "Physics + Biology preset" -> DefaultScheduleFactory.create(Cycle.A, current.workflowTemplate()).blocks(Cycle.A);
+            case "Chemistry + Mathematics preset" -> DefaultScheduleFactory.create(Cycle.B, current.workflowTemplate()).blocks(Cycle.B);
+            case "Copy active cycle" -> current.blocks(current.cycle());
+            default -> DefaultScheduleFactory.createDraft(cycle).blocks(cycle);
+        };
     }
 
     private void deleteSelectedTemplate() {
@@ -1193,7 +1258,7 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void addCreateCycleButton(FlowPane library, boolean disabled) {
-        addCreateAffordance(library, "Create new cycle", disabled, this::createCycle);
+        addCreateAffordance(library, "Create new cycle", disabled, this::showCreateCyclePopup);
     }
 
     private void addCreateAffordance(FlowPane library, String accessibleText,
@@ -1746,7 +1811,7 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void setCycle(Cycle cycle) {
-        if (current.cycle() == cycle) {
+        if (current.cycle().equals(cycle)) {
             statusLabel.setText("Cycle " + cycle.label() + " is already active.");
             return;
         }
