@@ -19,6 +19,7 @@ import javafx.animation.ParallelTransition;
 import javafx.animation.ScaleTransition;
 import javafx.animation.FadeTransition;
 import javafx.animation.Timeline;
+import javafx.animation.TranslateTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -88,6 +89,8 @@ public final class StudyPlannerApp extends Application {
     private static final double PROGRESS_RING_RADIUS = 49;
     private static final double PROGRESS_RING_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RING_RADIUS;
     private static final int ICON_PICKER_COLUMNS = 9;
+    private static final Duration PAGE_ANIMATION_DURATION = Duration.millis(220);
+    private static final Duration CARD_ANIMATION_DURATION = Duration.millis(230);
     private static final List<String> VAULT_FOLDERS = List.of(
             "Black Box", "Source Notes", "Projects", "Daily Notes", "Xournal++", "References");
     private static final List<String> TEMPLATE_ICON_IDS = List.of(
@@ -267,6 +270,7 @@ public final class StudyPlannerApp extends Application {
     private String expandedItemId;
     private boolean animateNextExpansion;
     private boolean animateSessionRefresh;
+    private boolean animateSessionCards = true;
     private Path schedulePath;
     private Path progressPath;
     private boolean usingLegacyProgressPath;
@@ -342,6 +346,7 @@ public final class StudyPlannerApp extends Application {
         stage.show();
         updateResponsiveLayout(scene.getWidth());
         renderSession();
+        animateDashboardEntrance();
     }
 
     private Pane buildAmbientLayer() {
@@ -886,6 +891,8 @@ public final class StudyPlannerApp extends Application {
         managerScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         managerScroll.getStyleClass().add("manager-scroll");
         mainViewHost.getChildren().setAll(managerScroll);
+        animatePage(managerScroll, 10);
+        animateChildrenIn(content.getChildren(), Duration.millis(36));
     }
 
     private TextField numericField(String value) {
@@ -1057,6 +1064,15 @@ public final class StudyPlannerApp extends Application {
         modalLayer.setManaged(true);
         modalLayer.setVisible(true);
         modalLayer.toFront();
+        panel.setOpacity(0);
+        panel.setScaleX(0.97);
+        panel.setScaleY(0.97);
+        FadeTransition fade = new FadeTransition(Duration.millis(180), panel);
+        fade.setToValue(1);
+        ScaleTransition scale = new ScaleTransition(Duration.millis(200), panel);
+        scale.setToX(1);
+        scale.setToY(1);
+        new ParallelTransition(fade, scale).play();
         Scene scene = primaryStage.getScene();
         modalEscapeHandler = event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
@@ -1344,13 +1360,50 @@ public final class StudyPlannerApp extends Application {
 
     private void showDashboardPage() {
         mainViewHost.getChildren().setAll(dashboardPage);
-        dashboardPage.setOpacity(0);
-        dashboardPage.setTranslateY(-8);
-        FadeTransition fade = new FadeTransition(Duration.millis(160), dashboardPage);
+        animatePage(dashboardPage, -8);
+        animateChildrenIn(List.of(hero, dashboardGrid), Duration.millis(52));
+        animateChildrenIn(new ArrayList<>(sessionList.getChildren()), Duration.millis(28));
+    }
+
+    private void animateDashboardEntrance() {
+        animatePage(dashboardPage, 10);
+        animateChildrenIn(List.of(hero, dashboardGrid), Duration.millis(52));
+    }
+
+    private void animatePage(Node node, double offsetY) {
+        animateNodeIn(node, offsetY, PAGE_ANIMATION_DURATION, Duration.ZERO);
+    }
+
+    private void animateChildrenIn(List<? extends Node> nodes, Duration stagger) {
+        for (int index = 0; index < nodes.size(); index++) {
+            animateNodeIn(nodes.get(index), 10, CARD_ANIMATION_DURATION,
+                    stagger.multiply(index));
+        }
+    }
+
+    private void animateNodeIn(Node node, double offsetY, Duration duration, Duration delay) {
+        if (node == null) return;
+        node.setOpacity(0);
+        node.setTranslateY(offsetY);
+        node.setScaleX(0.985);
+        node.setScaleY(0.985);
+        FadeTransition fade = new FadeTransition(duration, node);
         fade.setToValue(1);
-        javafx.animation.TranslateTransition slide = new javafx.animation.TranslateTransition(Duration.millis(160), dashboardPage);
+        TranslateTransition slide = new TranslateTransition(duration, node);
         slide.setToY(0);
-        new ParallelTransition(fade, slide).play();
+        ScaleTransition scale = new ScaleTransition(duration, node);
+        scale.setToX(1);
+        scale.setToY(1);
+        ParallelTransition entrance = new ParallelTransition(fade, slide, scale);
+        entrance.setDelay(delay);
+        entrance.setInterpolator(Interpolator.EASE_OUT);
+        entrance.setOnFinished(event -> {
+            node.setOpacity(1);
+            node.setTranslateY(0);
+            node.setScaleX(1);
+            node.setScaleY(1);
+        });
+        entrance.play();
     }
 
     private void addManagerField(GridPane form, int row, String labelText, Node control) {
@@ -1487,6 +1540,10 @@ public final class StudyPlannerApp extends Application {
             Node card = item.pause() ? pauseCard(item, index) : studyCard(item, index);
             card.setManaged(true);
             sessionList.getChildren().add(card);
+        }
+        if (animateSessionCards) {
+            animateSessionCards = false;
+            animateChildrenIn(new ArrayList<>(sessionList.getChildren()), Duration.millis(24));
         }
         animateNextExpansion = false;
 
@@ -1765,6 +1822,7 @@ public final class StudyPlannerApp extends Application {
         }
         expandedItemId = completed ? nextPendingExpandableItemId() : item.id();
         animateNextExpansion = expandedItemId != null;
+        animateSessionCards = true;
         animateSessionRefresh = true;
         persistProgress();
         renderSession();
@@ -1781,6 +1839,7 @@ public final class StudyPlannerApp extends Application {
         }
         expandedItemId = completed ? nextPendingExpandableItemId() : item.id();
         animateNextExpansion = expandedItemId != null;
+        animateSessionCards = true;
         animateSessionRefresh = true;
         persistProgress();
         renderSession();
@@ -1819,6 +1878,7 @@ public final class StudyPlannerApp extends Application {
         activateSelectedTemplate();
         persistSchedule();
         persistProgress();
+        animateSessionCards = true;
         renderSession();
     }
 
@@ -1829,6 +1889,7 @@ public final class StudyPlannerApp extends Application {
             activateSelectedTemplate();
             persistSchedule();
             persistProgress();
+            animateSessionCards = true;
             renderSession();
             statusLabel.setText("Session complete. Cycle " + current.cycle().label() + " is active.");
         } catch (RuntimeException exception) {
@@ -1904,6 +1965,7 @@ public final class StudyPlannerApp extends Application {
             usingLegacyProgressPath = isLegacyDefaultLibrary();
             activateSelectedTemplate();
             lastSavedLibrary = library;
+            animateSessionCards = true;
             renderSession();
             statusLabel.setText("Template library reloaded.");
         } catch (IOException | RuntimeException exception) {
@@ -1914,6 +1976,7 @@ public final class StudyPlannerApp extends Application {
     private void resetProgress() {
         progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
         persistProgress();
+        animateSessionCards = true;
         renderSession();
         statusLabel.setText("Session progress reset.");
     }
