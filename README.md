@@ -42,3 +42,30 @@ For NixOS, use the flake package/app described in `nix/README.md`. A real Nix bu
 ## License
 
 Personal configuration and utility software for the Livara environment.
+
+## Repository structure
+
+```text
+.
+.gitignore
+CHANGELOG.md
+DASHBOARD_ARCHITECTURE.md
+README.md
+build.gradle
+flake.lock
+flake.nix
+gradle
+  └── gradle/wrapper
+gradlew
+gradlew.bat
+nix
+  └── nix/README.md
+  └── nix/deps.json
+  └── nix/package.nix
+scripts
+  └── scripts/validate-visual-contracts.sh
+settings.gradle
+src
+  └── src/main
+  └── src/test
+```
