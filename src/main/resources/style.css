@@ -94,6 +94,18 @@
     -fx-letter-spacing: 1.2px;
     -fx-text-fill: -fx-livara-faint;
 }
+.user-mark {
+    -fx-min-width: 22px;
+    -fx-pref-width: 22px;
+    -fx-max-width: 22px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
+}
+.user-mark .menu-icon {
+    -fx-stroke: -fx-livara-accent;
+    -fx-stroke-width: 2.1px;
+}
 
 .hero-widget {
     -fx-background-color: -fx-livara-surface;
@@ -801,25 +813,44 @@
     -fx-text-fill: -fx-livara-text;
 }
 
-.scroll-bar:vertical,
+.scroll-bar:vertical {
+    -fx-opacity: 0.82;
+    -fx-pref-width: 8px;
+    -fx-min-width: 8px;
+    -fx-max-width: 8px;
+}
 .scroll-bar:horizontal {
-    -fx-opacity: 0;
-    -fx-pref-width: 0;
-    -fx-pref-height: 0;
-    -fx-min-width: 0;
-    -fx-min-height: 0;
-    -fx-max-width: 0;
-    -fx-max-height: 0;
+    -fx-opacity: 0.82;
+    -fx-pref-height: 8px;
+    -fx-min-height: 8px;
+    -fx-max-height: 8px;
 }
 .scroll-bar .increment-button,
 .scroll-bar .decrement-button,
-.scroll-bar .track,
-.scroll-bar .thumb {
+.scroll-bar .track {
     -fx-padding: 0;
     -fx-background-color: transparent;
 }
+.scroll-bar .thumb {
+    -fx-background-color: -fx-livara-border-strong;
+    -fx-background-radius: 8px;
+}
+.page-scroll,
+.page-scroll .viewport,
+.manager-scroll,
+.manager-scroll .viewport,
+.flow-scroll,
+.flow-scroll .viewport,
+.modal-scroll,
+.modal-scroll .viewport,
+.modal-scroll .content {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
 
-/* Template manager: structured, responsive, and intentionally shadow-free. */
+
 .manager-panel {
     -fx-background-color: -fx-livara-surface;
     -fx-background-insets: 0;
@@ -1094,13 +1125,13 @@
     -fx-scale-y: 0.9;
 }
 
-/* Contextual editor modals: one scene-graph host, no native Popup rectangle. */
+
 .modal-layer {
     -fx-background-color: transparent;
 }
 .modal-backdrop {
     -fx-background-color: rgba(0, 0, 0, 0.76);
-    -fx-padding: 42px;
+    -fx-padding: 24px;
 }
 .editor-modal {
     -fx-background-color: -fx-livara-surface-raised;
@@ -1111,10 +1142,10 @@
     -fx-border-radius: 18px;
     -fx-border-width: 1px;
     -fx-padding: 32px;
-    -fx-min-width: 620px;
-    -fx-pref-width: 700px;
+    -fx-min-width: 0;
+    -fx-pref-width: 680px;
     -fx-max-width: 820px;
-    -fx-min-height: 500px;
+    -fx-min-height: 0;
     -fx-font-size: 15px;
 }
 .modal-header {
@@ -1225,7 +1256,7 @@
     -fx-min-width: 132px;
 }
 
-/* Legacy popup selectors remain only for ComboBox skin windows, not editor modals. */
+
 .root.popup,
 .popup-root {
     -fx-background-color: transparent;

@@ -7,11 +7,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * Persistent collection of reusable schedule templates and its active selection.
- * The library is immutable so UI transitions cannot leave identity, sequence and
- * selected template out of sync.
- */
+
+
+
+
+
 public final class TemplateLibrary {
     public record Entry(String id, ScheduleTemplate schedule) {
         public Entry {
@@ -122,10 +122,10 @@ public final class TemplateLibrary {
         return new TemplateLibrary(schemaVersion, id, updated);
     }
 
-    /**
-     * Removes an entry and selects the nearest remaining entry. A caller must
-     * decide how to restore a default when removing the final item.
-     */
+
+
+
+
     public TemplateLibrary remove(String id) {
         requireEntry(id);
         if (entries.size() == 1) {

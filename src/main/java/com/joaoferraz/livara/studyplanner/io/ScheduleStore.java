@@ -362,7 +362,7 @@ public final class ScheduleStore {
         private Number numberValue() throws IOException {
             int start = index;
             if (consume('-')) {
-                // sign consumed
+
             }
             while (index < source.length() && Character.isDigit(source.charAt(index))) {
                 index++;

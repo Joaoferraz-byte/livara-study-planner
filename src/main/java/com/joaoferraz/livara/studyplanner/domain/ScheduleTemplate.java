@@ -18,13 +18,13 @@ public final class ScheduleTemplate {
     private final String iconId;
     private final Map<Cycle, Map<DayOfWeek, List<StudyBlock>>> blocksByCycle;
 
-    /** Backwards-compatible constructor for callers and schema-v1 documents. */
+
     public ScheduleTemplate(int schemaVersion, String name, Cycle cycle, int pauseMinutes,
                             Map<DayOfWeek, List<StudyBlock>> blocksByDay) {
         this(schemaVersion, name, cycle, WorkflowTemplate.MARKET_PROGRAMMING, pauseMinutes, blocksByDay);
     }
 
-    /** Backwards-compatible constructor for a template that contains its active cycle projection. */
+
     public ScheduleTemplate(int schemaVersion, String name, Cycle cycle, WorkflowTemplate workflowTemplate,
                             int pauseMinutes, Map<DayOfWeek, List<StudyBlock>> blocksByDay) {
         this(schemaVersion, name, cycle, workflowTemplate, pauseMinutes, "layout-dashboard",
@@ -95,7 +95,7 @@ public final class ScheduleTemplate {
     public int pauseMinutes() { return pauseMinutes; }
     public String iconId() { return iconId; }
 
-    /** Returns the active cycle projection kept for existing callers. */
+
     public Map<DayOfWeek, List<StudyBlock>> blocksByDay() { return blocks(cycle); }
     public Map<DayOfWeek, List<StudyBlock>> blocks(Cycle value) {
         return blocksByCycle.getOrDefault(Objects.requireNonNull(value, "cycle"), Map.of());

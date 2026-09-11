@@ -6,13 +6,13 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/**
- * A named rotation in a reusable schedule.
- *
- * The original application used an enum with exactly A and B. The constants
- * remain as compatibility presets, while user-created cycles carry their own
- * stable id, label, description and optional focus requirements.
- */
+
+
+
+
+
+
+
 public final class Cycle {
     private static final Pattern ID = Pattern.compile("[a-z0-9][a-z0-9_-]{0,63}");
 
@@ -42,7 +42,7 @@ public final class Cycle {
         return new Cycle(id, label, subjects, requiredFocuses);
     }
 
-    /** Parses a persisted id and retains the two legacy preset semantics. */
+
     public static Cycle fromId(String value) {
         Objects.requireNonNull(value, "cycle id");
         String normalized = value.trim();
@@ -61,12 +61,12 @@ public final class Cycle {
         return new Cycle(id, label, subjects, requiredFocuses);
     }
 
-    /** Compatibility with callers that previously used enum constants. */
+
     public static Cycle valueOf(String value) {
         return fromId(value);
     }
 
-    /** Compatibility list of built-in presets; custom cycles are template-local. */
+
     public static Cycle[] values() {
         return new Cycle[] { A, B };
     }
@@ -75,7 +75,7 @@ public final class Cycle {
         return id;
     }
 
-    /** Compatibility with enum-backed JSON and callers. */
+
     public String name() {
         return id.equals("a") ? "A" : id.equals("b") ? "B" : id;
     }
@@ -92,7 +92,7 @@ public final class Cycle {
         return requiredFocuses;
     }
 
-    /** Compatibility behavior for the original two preset constants. */
+
     public Cycle next() {
         if (equals(A)) {
             return B;

@@ -23,10 +23,10 @@ public final class DefaultScheduleFactory {
         return ScheduleTemplate.withCycles(2, workflowTemplate.label(), cycle, workflowTemplate, 15, cycles);
     }
 
-    /**
-     * Creates the first editable state of a user-created template. It starts
-     * with a valid sequence so selecting it never persists an invalid library.
-     */
+
+
+
+
     public static ScheduleTemplate createDraft(Cycle cycle) {
         WorkflowTemplate workflow = WorkflowTemplate.MARKET_PROGRAMMING;
         LinkedHashMap<Cycle, Map<DayOfWeek, List<StudyBlock>>> cycles = new LinkedHashMap<>();

@@ -45,8 +45,8 @@ jar {
     }
 }
 
-// Keeps the GUI and CLI entry points in the same distribution while allowing
-// the CLI to run in headless CI without creating a JavaFX Application instance.
+
+
 run {
     standardInput = System.in
 }

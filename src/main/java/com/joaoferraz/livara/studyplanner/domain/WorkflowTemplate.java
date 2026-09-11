@@ -3,10 +3,10 @@ package com.joaoferraz.livara.studyplanner.domain;
 import java.util.Arrays;
 import java.util.Locale;
 
-/**
- * Reusable study-workflow intentions. Future templates can be added here;
- * the current product intentionally ships with one requested template.
- */
+
+
+
+
 public enum WorkflowTemplate {
     MARKET_PROGRAMMING(
             "market-programming",

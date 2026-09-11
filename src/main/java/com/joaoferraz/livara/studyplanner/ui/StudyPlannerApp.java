@@ -128,6 +128,7 @@ public final class StudyPlannerApp extends Application {
     private final MenuButton menu = new MenuButton("Menu");
     private final StackPane mainViewHost = new StackPane();
     private VBox dashboardPage;
+    private ScrollPane dashboardScroll;
     private Node menuIcon;
     private Node manageIcon;
     private Stage primaryStage;
@@ -320,7 +321,12 @@ public final class StudyPlannerApp extends Application {
         dashboardPage = new VBox(16, buildHero(), buildDashboardGrid());
         dashboardPage.getStyleClass().add("dashboard-page");
         VBox.setVgrow(dashboardGrid, Priority.ALWAYS);
-        mainViewHost.getChildren().setAll(dashboardPage);
+        dashboardScroll = new ScrollPane(dashboardPage);
+        dashboardScroll.setFitToWidth(true);
+        dashboardScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        dashboardScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        dashboardScroll.getStyleClass().add("page-scroll");
+        mainViewHost.getChildren().setAll(dashboardScroll);
         VBox shell = new VBox(16, buildTopBar(), mainViewHost);
         shell.getStyleClass().add("dashboard-shell");
         VBox.setVgrow(mainViewHost, Priority.ALWAYS);
@@ -372,7 +378,9 @@ public final class StudyPlannerApp extends Application {
         brand.getStyleClass().add("brand-mark");
         Label context = new Label("STUDY PLANNER");
         context.getStyleClass().add("top-context");
-        HBox left = new HBox(10, brand, context);
+        Node userIcon = toolbarIcon("user");
+        userIcon.getStyleClass().add("user-mark");
+        HBox left = new HBox(8, userIcon, brand, context);
         left.setAlignment(Pos.CENTER_LEFT);
 
         Button homeButton = new Button();
@@ -396,6 +404,12 @@ public final class StudyPlannerApp extends Application {
         MenuItem activeTemplate = new MenuItem(current.workflowTemplate().label() + " (active)");
         activeTemplate.setDisable(true);
         workflowMenu.getItems().add(activeTemplate);
+        for (TemplateLibrary.Entry entry : library.entries()) {
+            MenuItem templateItem = new MenuItem(entry.schedule().name());
+            templateItem.setDisable(entry.id().equals(library.selectedTemplateId()));
+            templateItem.setOnAction(event -> selectTemplate(entry.id()));
+            workflowMenu.getItems().add(templateItem);
+        }
         MenuItem reload = new MenuItem("Reload schedule");
         reload.setOnAction(event -> reloadSchedule());
         MenuItem validate = new MenuItem("Validate schedule");
@@ -675,14 +689,9 @@ public final class StudyPlannerApp extends Application {
             return;
         }
         popup.setOpacity(0);
-        popup.setScaleX(0.96);
-        popup.setScaleY(0.96);
         FadeTransition fade = new FadeTransition(Duration.millis(150), popup);
         fade.setToValue(1);
-        ScaleTransition scale = new ScaleTransition(Duration.millis(180), popup);
-        scale.setToX(1);
-        scale.setToY(1);
-        new ParallelTransition(fade, scale).play();
+        fade.play();
     }
 
     private void showTemplatePage() {
@@ -705,7 +714,12 @@ public final class StudyPlannerApp extends Application {
         workflow.getItems().addAll(WorkflowTemplate.values());
         workflow.setConverter(new StringConverter<>() {
             @Override public String toString(WorkflowTemplate value) { return value == null ? "" : value.label(); }
-            @Override public WorkflowTemplate fromString(String value) { return WorkflowTemplate.MARKET_PROGRAMMING; }
+            @Override public WorkflowTemplate fromString(String value) {
+                for (WorkflowTemplate candidate : WorkflowTemplate.values()) {
+                    if (candidate.label().equals(value) || candidate.id().equals(value)) return candidate;
+                }
+                return WorkflowTemplate.MARKET_PROGRAMMING;
+            }
         });
         workflow.setValue(current.workflowTemplate());
         workflow.setMaxWidth(Double.MAX_VALUE);
@@ -860,8 +874,7 @@ public final class StudyPlannerApp extends Application {
                             workflow.getValue(), pauseMinutes, icon.getValue(), blockRows);
                 }
                 library = library.updateSelected(edited);
-                current = library.selected();
-                progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
+                activateSelectedTemplate();
                 persistSchedule();
                 persistProgress();
                 expandedItemId = null;
@@ -1051,10 +1064,22 @@ public final class StudyPlannerApp extends Application {
 
     private StackPane showModal(VBox panel) {
         panel.getStyleClass().add("editor-modal");
-        StackPane backdrop = new StackPane(panel);
+        Scene scene = primaryStage.getScene();
+        double viewportWidth = Math.max(320, scene.getWidth() - 84);
+        double viewportHeight = Math.max(240, scene.getHeight() - 84);
+        ScrollPane scroll = new ScrollPane(panel);
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setPrefViewportWidth(Math.min(700, viewportWidth));
+        scroll.setPrefViewportHeight(Math.min(640, viewportHeight));
+        scroll.setMaxWidth(viewportWidth);
+        scroll.setMaxHeight(viewportHeight);
+        scroll.getStyleClass().add("modal-scroll");
+        StackPane backdrop = new StackPane(scroll);
         backdrop.getStyleClass().add("modal-backdrop");
         backdrop.setPickOnBounds(true);
-        StackPane.setAlignment(panel, Pos.CENTER);
+        StackPane.setAlignment(scroll, Pos.CENTER);
         backdrop.setOnMouseClicked(event -> {
             if (event.getTarget() == backdrop) {
                 closeModal(backdrop);
@@ -1073,7 +1098,6 @@ public final class StudyPlannerApp extends Application {
         scale.setToX(1);
         scale.setToY(1);
         new ParallelTransition(fade, scale).play();
-        Scene scene = primaryStage.getScene();
         modalEscapeHandler = event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 closeModal(backdrop);
@@ -1191,6 +1215,15 @@ public final class StudyPlannerApp extends Application {
         nameCopy.deselect();
         ComboBox<WorkflowTemplate> workflowCopy = new ComboBox<>();
         workflowCopy.getItems().addAll(WorkflowTemplate.values());
+        workflowCopy.setConverter(new StringConverter<>() {
+            @Override public String toString(WorkflowTemplate value) { return value == null ? "" : value.label(); }
+            @Override public WorkflowTemplate fromString(String value) {
+                for (WorkflowTemplate candidate : WorkflowTemplate.values()) {
+                    if (candidate.label().equals(value) || candidate.id().equals(value)) return candidate;
+                }
+                return WorkflowTemplate.MARKET_PROGRAMMING;
+            }
+        });
         workflowCopy.setValue(workflow.getValue());
         TextField pauseCopy = numericField(pause.getText());
         for (Node node : List.of(nameCopy, workflowCopy, pauseCopy, currentIcon)) {
@@ -1216,7 +1249,6 @@ public final class StudyPlannerApp extends Application {
                 name.setText(nameCopy.getText());
                 workflow.setValue(workflowCopy.getValue());
                 pause.setText(pauseCopy.getText());
-                icon.setValue(icon.getValue());
                 refresh.run();
                 closeModal(modal[0]);
             } catch (RuntimeException exception) {
@@ -1359,7 +1391,7 @@ public final class StudyPlannerApp extends Application {
     }
 
     private void showDashboardPage() {
-        mainViewHost.getChildren().setAll(dashboardPage);
+        mainViewHost.getChildren().setAll(dashboardScroll);
         animatePage(dashboardPage, -8);
         animateChildrenIn(List.of(hero, dashboardGrid), Duration.millis(52));
         animateChildrenIn(new ArrayList<>(sessionList.getChildren()), Duration.millis(28));
@@ -1901,7 +1933,7 @@ public final class StudyPlannerApp extends Application {
         return library.entries().size() == 1 && library.selectedTemplateId().equals("default");
     }
 
-    /** Keeps startup and post-delete transitions on a valid selected template. */
+
     private boolean normalizeLoadedLibrary() {
         current = library.selected();
         if (service.validate(current).isEmpty()) {
@@ -1923,18 +1955,30 @@ public final class StudyPlannerApp extends Application {
         return schedulePath.resolveSibling(schedulePath.getFileName() + ".progress.properties");
     }
 
-    private Path progressPathFor(String templateId) {
-        if (usingLegacyProgressPath && templateId.equals("default")) {
+    private Path legacyTemplateProgressPath(String templateId) {
+        return schedulePath.resolveSibling(schedulePath.getFileName() + "." + templateId + ".progress.properties");
+    }
+
+    private Path progressPathFor(String templateId, Cycle cycle, WorkflowTemplate workflowTemplate) {
+        if (usingLegacyProgressPath && templateId.equals("default")
+                && cycle.equals(Cycle.A) && workflowTemplate.equals(WorkflowTemplate.MARKET_PROGRAMMING)) {
             return legacyProgressPath();
         }
-        return schedulePath.resolveSibling(schedulePath.getFileName() + "." + templateId + ".progress.properties");
+        return schedulePath.resolveSibling(schedulePath.getFileName() + "." + templateId + "."
+                + cycle.id() + "." + workflowTemplate.id() + ".progress.properties");
     }
 
     private void activateSelectedTemplate() {
         current = library.selected();
-        progressPath = progressPathFor(library.selectedTemplateId());
+        Path canonicalPath = progressPathFor(library.selectedTemplateId(), current.cycle(), current.workflowTemplate());
+        Path previousPath = legacyTemplateProgressPath(library.selectedTemplateId());
+        progressPath = Files.exists(canonicalPath) || !Files.exists(previousPath) ? canonicalPath : previousPath;
         try {
             progress = progressStore.loadOrEmpty(progressPath, current.cycle(), current.workflowTemplate());
+            if (progressPath.equals(previousPath) && !progressPath.equals(canonicalPath)) {
+                progressPath = canonicalPath;
+                persistProgress();
+            }
         } catch (IOException | RuntimeException exception) {
             progress = ProgressState.empty(current.cycle(), current.workflowTemplate());
             statusLabel.setText("Progress reset for the selected template: " + exception.getMessage());
@@ -1960,6 +2004,8 @@ public final class StudyPlannerApp extends Application {
 
     private void reloadSchedule() {
         try {
+            boolean managerVisible = mainViewHost.getChildren().stream()
+                    .anyMatch(node -> node.getStyleClass().contains("manager-scroll"));
             library = libraryStore.load(schedulePath);
             current = library.selected();
             usingLegacyProgressPath = isLegacyDefaultLibrary();
@@ -1967,6 +2013,9 @@ public final class StudyPlannerApp extends Application {
             lastSavedLibrary = library;
             animateSessionCards = true;
             renderSession();
+            if (managerVisible) {
+                showTemplatePage();
+            }
             statusLabel.setText("Template library reloaded.");
         } catch (IOException | RuntimeException exception) {
             showError("Unable to reload template library", exception.getMessage());

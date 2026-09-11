@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Persists the template library atomically and migrates the former single schedule document. */
+
 public final class TemplateLibraryStore {
     private final ScheduleStore scheduleStore = new ScheduleStore();
 
@@ -45,11 +45,11 @@ public final class TemplateLibraryStore {
         return fromRoot(root);
     }
 
-    /**
-     * The first multi-cycle release can read the former single-schedule format,
-     * but that format had no way to persist cycle B. Only the seeded default
-     * template is enriched here; custom templates remain exactly as authored.
-     */
+
+
+
+
+
     private ScheduleTemplate migrateLegacyDefault(ScheduleTemplate schedule) {
         if (schedule.schemaVersion() < 2
                 && schedule.cycle().equals(Cycle.A)

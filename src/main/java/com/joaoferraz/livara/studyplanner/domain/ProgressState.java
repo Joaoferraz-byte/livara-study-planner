@@ -4,7 +4,7 @@ import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 
-/** Runtime execution state kept separate from the reusable schedule template. */
+
 public final class ProgressState {
     private final int schemaVersion;
     private final Cycle cycle;
