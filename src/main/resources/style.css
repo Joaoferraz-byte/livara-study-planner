@@ -13,9 +13,9 @@
     -fx-livara-faint: derive(-fx-text-base-color, -50%);
     -fx-livara-accent-soft: derive(-fx-base, 22%);
     -fx-livara-accent-strong: derive(-fx-accent, -12%);
-    -fx-livara-success: #8ee6b0;
-    -fx-livara-secondary: #c3adff;
-    -fx-livara-brand: #c76b98;
+    -fx-livara-success: -fx-livara-accent;
+    -fx-livara-secondary: -fx-livara-accent;
+    -fx-livara-brand: -fx-livara-accent-strong;
     -fx-background-color: -fx-livara-background;
     -fx-font-family: "Inter", "Noto Sans", sans-serif;
     -fx-font-size: 13px;

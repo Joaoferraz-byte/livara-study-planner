@@ -72,11 +72,17 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.function.UnaryOperator;
@@ -139,6 +145,11 @@ public final class StudyPlannerApp extends Application {
     private Cycle selectedEditorCycle;
     private final StackPane modalLayer = new StackPane();
     private EventHandler<KeyEvent> modalEscapeHandler;
+    private final ExecutorService themeWatcherExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "livara-study-planner-theme-watcher");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private static final class BlockEditorRow {
         private int order;
@@ -353,6 +364,7 @@ public final class StudyPlannerApp extends Application {
         updateResponsiveLayout(scene.getWidth());
         renderSession();
         animateDashboardEntrance();
+        startThemeWatcher(sceneRoot);
     }
 
     private Pane buildAmbientLayer() {
@@ -2076,10 +2088,62 @@ public final class StudyPlannerApp extends Application {
                 .replace("\"", "\\\\\"");
     }
 
-    private void applyMatugenPalette(Node root) {
-        Path palette = Path.of(System.getenv().getOrDefault(
+    @Override
+    public void stop() {
+        themeWatcherExecutor.shutdownNow();
+    }
+
+    private void startThemeWatcher(Node root) {
+        Path palette = themePalettePath();
+        Path paletteDirectory = palette.getParent();
+        if (paletteDirectory == null) {
+            return;
+        }
+        try {
+            Files.createDirectories(paletteDirectory);
+        } catch (IOException exception) {
+            return;
+        }
+        themeWatcherExecutor.submit(() -> {
+            try (WatchService watchService = paletteDirectory.getFileSystem().newWatchService()) {
+                WatchKey watchKey = paletteDirectory.register(watchService,
+                        StandardWatchEventKinds.ENTRY_CREATE,
+                        StandardWatchEventKinds.ENTRY_MODIFY,
+                        StandardWatchEventKinds.ENTRY_DELETE);
+                while (!Thread.currentThread().isInterrupted()) {
+                    WatchKey changedKey = watchService.take();
+                    boolean paletteChanged = changedKey.pollEvents().stream()
+                            .map(WatchEvent::context)
+                            .filter(Path.class::isInstance)
+                            .map(Path.class::cast)
+                            .anyMatch(palette.getFileName()::equals);
+                    if (paletteChanged) {
+                        Platform.runLater(() -> {
+                            if (primaryStage != null && primaryStage.getScene() != null) {
+                                applyMatugenPalette(root);
+                            }
+                        });
+                    }
+                    if (!changedKey.reset()) {
+                        break;
+                    }
+                }
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            } catch (IOException exception) {
+                System.err.println("Livara palette watcher stopped: " + exception.getMessage());
+            }
+        });
+    }
+
+    private Path themePalettePath() {
+        return Path.of(System.getenv().getOrDefault(
                 "LIVARA_THEME_ROOT", System.getProperty("user.home") + "/.local/state/livara/theme")
-        ).resolve("palette.dark.json");
+        ).resolve("palette.json");
+    }
+
+    private void applyMatugenPalette(Node root) {
+        Path palette = themePalettePath();
         String base = paletteColor(palette, "base", "#17181d");
         String text = paletteColor(palette, "text", "#e5e1e9");
         String primary = paletteColor(palette, "primary", "#b8c8ff");
